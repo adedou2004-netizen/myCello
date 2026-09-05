@@ -848,8 +848,33 @@ svg {
 #hanzi-course .guide div{display:grid;place-items:center;aspect-ratio:1;background:var(--muted);color:var(--muted-foreground);border-radius:6px;position:relative}
 #hanzi-course .guide svg{width:100%;height:100%}
 #hanzi-course .guide span{position:absolute;inset:3px auto auto 5px;font-size:11px}
-@media(max-width:620px){#hanzi-course .layout{grid-template-columns:1fr}#hanzi-course #writer{width:280px;height:280px}#hanzi-course .lesson-grid{grid-template-columns:repeat(5,1fr)}}
+#hanzi-course .app-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;background:var(--muted);border-radius:14px}
+#hanzi-course .app-tabs .btn{min-height:46px;font-size:16px}
+#hanzi-course .app-tabs .btn[aria-selected="true"]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+#hanzi-course [hidden]{display:none!important}
+#hanzi-course .game-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#hanzi-course .game-card{display:grid;gap:8px;min-height:150px;padding:18px;text-align:left;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--foreground);cursor:pointer}
+#hanzi-course .game-card:hover,#hanzi-course .game-card:focus-visible{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+#hanzi-course .game-card strong{font-size:20px}.game-card span{color:var(--muted-foreground)}
+#hanzi-course .game-symbol{font-size:44px;line-height:1}
+#hanzi-course .game-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#hanzi-course .game-stage{display:grid;gap:16px;max-width:680px;margin:0 auto;width:100%}
+#hanzi-course .game-character{display:grid;place-items:center;min-height:190px;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--card);font-size:96px;line-height:1.15}
+#hanzi-course .answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#hanzi-course .answer{min-height:64px;padding:12px;font-size:18px;line-height:1.25;white-space:normal}
+#hanzi-course .answer.correct{border-color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+#hanzi-course .answer.wrong{border-color:var(--red);background:color-mix(in srgb,var(--red) 14%,transparent)}
+#hanzi-course .game-feedback{min-height:30px;text-align:center;font-size:17px;font-weight:600}
+#hanzi-course .game-actions{display:flex;justify-content:center}
+#hanzi-course .result-card{display:grid;gap:16px;place-items:center;padding:28px;text-align:center}
+#hanzi-course .result-score{font-size:48px;color:var(--primary);font-weight:700}
+@media(max-width:620px){#hanzi-course .layout{grid-template-columns:1fr}#hanzi-course #writer{width:280px;height:280px}#hanzi-course .lesson-grid{grid-template-columns:repeat(5,1fr)}#hanzi-course .game-picker,#hanzi-course .answers{grid-template-columns:1fr}#hanzi-course .game-character{font-size:82px;min-height:160px}}
 </style>
+<nav class="app-tabs" aria-label="Mandarin app sections">
+  <button id="practiceTab" class="btn" type="button" role="tab" aria-selected="true" aria-controls="practiceView">✍️ Learn &amp; write</button>
+  <button id="gamesTab" class="btn" type="button" role="tab" aria-selected="false" aria-controls="gamesView">🎮 Games</button>
+</nav>
+<div id="practiceView" role="tabpanel" aria-labelledby="practiceTab">
 <div class="topline">
   <strong id="lessonLabel">Lesson 1 of 20</strong>
   <div class="meter" aria-label="Course progress"><span id="progressBar"></span></div>
@@ -879,6 +904,27 @@ svg {
     </div>
   </section>
 </div>
+</div>
+<section id="gamesView" role="tabpanel" aria-labelledby="gamesTab" hidden>
+  <div id="gameHome">
+    <div class="game-top"><div><h2>Choose a matching game</h2><p class="text-muted">Each round has 10 characters and four choices.</p></div></div>
+    <div class="game-picker" style="margin-top:14px">
+      <button class="game-card" id="englishGame" type="button"><span class="game-symbol">字 → A</span><strong>Character → English</strong><span>Choose the English meaning of the character.</span></button>
+      <button class="game-card" id="pinyinGame" type="button"><span class="game-symbol">字 → yǔ</span><strong>Character → Pinyin</strong><span>Choose the official pinyin, including its tone mark.</span></button>
+    </div>
+  </div>
+  <div id="gamePlay" class="game-stage" hidden>
+    <div class="game-top"><button id="leaveGame" class="btn btn-ghost" type="button">← Games</button><strong id="gameProgress">1 of 10</strong><span id="gameScore">Score: 0</span></div>
+    <div id="gamePrompt" class="game-character" aria-label="Character to match"></div>
+    <div id="answerChoices" class="answers" aria-label="Answer choices"></div>
+    <div id="gameFeedback" class="game-feedback" aria-live="polite"></div>
+    <div class="game-actions"><button id="nextQuestion" class="btn btn-primary" type="button" hidden>Next character →</button></div>
+  </div>
+  <div id="gameResult" class="result-card card" hidden>
+    <h2>Round complete!</h2><div id="resultScore" class="result-score"></div><p id="resultMessage"></p><p id="resultSpeed" class="text-muted"></p>
+    <div class="viz-controls"><button id="playAgain" class="btn btn-primary" type="button">Play again</button><button id="chooseGame" class="btn" type="button">Choose another game</button></div>
+  </div>
+</section>
 <script>
 (function(){
 const root=document.getElementById('hanzi-course');
@@ -913,8 +959,17 @@ function frenchSound(py){
   return ini+(finals[fin]??fin);
 }
 let learned=new Set(JSON.parse(localStorage.getItem('hanzi-learned')||'[]'));
+let gameType='english',gameQuestions=[],gameNumber=0,gamePoints=0,gameAnswered=false,questionStarted=0,responseTimes=[];
 let writing=false,currentPoints=[],acceptedStrokes=[],strokeIndex=0,quizMode=false,animationTimers=[];
 const el=id=>root.querySelector('#'+id);
+function shuffled(list){const copy=[...list];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy}
+function showSection(section){const games=section==='games';el('practiceView').hidden=games;el('gamesView').hidden=!games;el('practiceTab').setAttribute('aria-selected',String(!games));el('gamesTab').setAttribute('aria-selected',String(games));if(!games)stopAnimation()}
+function showGameHome(){el('gameHome').hidden=false;el('gamePlay').hidden=true;el('gameResult').hidden=true}
+function startGame(type){gameType=type;gameQuestions=shuffled(entries).slice(0,10);gameNumber=0;gamePoints=0;responseTimes=[];el('gameHome').hidden=true;el('gameResult').hidden=true;el('gamePlay').hidden=false;renderQuestion()}
+function answerValue(entry){return gameType==='english'?entry[2]:entry[1]}
+function renderQuestion(){gameAnswered=false;const target=gameQuestions[gameNumber],correct=answerValue(target);el('gamePrompt').textContent=target[0];el('gameProgress').textContent=(gameNumber+1)+' of 10';el('gameScore').textContent='Score: '+gamePoints;el('gameFeedback').textContent=gameType==='english'?'Choose the English meaning.':'Choose the pinyin with the correct tone.';el('nextQuestion').hidden=true;const distractors=shuffled(entries.filter(e=>answerValue(e)!==correct)).slice(0,3).map(answerValue);el('answerChoices').innerHTML='';shuffled([correct,...distractors]).forEach(value=>{const b=document.createElement('button');b.type='button';b.className='btn answer';b.textContent=value;b.onclick=()=>checkAnswer(b,value,correct,target);el('answerChoices').appendChild(b)});questionStarted=performance.now()}
+function checkAnswer(button,value,correct,target){if(gameAnswered)return;gameAnswered=true;responseTimes.push((performance.now()-questionStarted)/1000);const right=value===correct;if(right){gamePoints++;button.classList.add('correct');el('gameFeedback').textContent='Correct! '+target[0]+' = '+target[1]+' = '+target[2]+'.'}else{button.classList.add('wrong');[...el('answerChoices').children].find(b=>b.textContent===correct)?.classList.add('correct');el('gameFeedback').textContent='The answer is '+correct+'. '+target[0]+' = '+target[1]+' = '+target[2]+'.'}[...el('answerChoices').children].forEach(b=>b.disabled=true);el('gameScore').textContent='Score: '+gamePoints;el('nextQuestion').textContent=gameNumber===9?'See my result':'Next character →';el('nextQuestion').hidden=false}
+function finishGame(){el('gamePlay').hidden=true;el('gameResult').hidden=false;el('resultScore').textContent=gamePoints+' / 10';el('resultMessage').textContent=gamePoints>=9?'Excellent recall!':gamePoints>=7?'Good work—keep practising.':'Keep going—the next round will strengthen your memory.';const avg=responseTimes.reduce((a,b)=>a+b,0)/Math.max(1,responseTimes.length);el('resultSpeed').textContent='Average answer time: '+avg.toFixed(1)+' seconds.';localStorage.setItem('hanzi-last-game',JSON.stringify({type:gameType,score:gamePoints,averageSeconds:Number(avg.toFixed(1)),date:new Date().toISOString()}))}
 for(let i=0;i<20;i++){const o=document.createElement('option');o.value=i;o.textContent='Lesson '+(i+1)+' · characters '+(i*10+1)+'–'+(i*10+10);el('lessonSelect').appendChild(o)}
 function svgEl(name,attrs={}){const n=document.createElementNS('http://www.w3.org/2000/svg',name);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));return n}
 function stopAnimation(){animationTimers.forEach(clearTimeout);animationTimers=[]}
@@ -962,7 +1017,12 @@ el('hint').onclick=()=>{flashStroke(strokeIndex);el('feedback').textContent='The
 el('clear').onclick=()=>{makeWriter();el('feedback').textContent='Cleared. Watch or practice again.'};
 el('speak').onclick=()=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(entries[index][0]);u.lang='zh-CN';u.rate=.75;speechSynthesis.speak(u)};
 el('previous').onclick=()=>{if(index>0){index--;render()}};el('next').onclick=()=>{if(index<199){index++;render()}};
-el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};render();
+el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};
+el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};
+el('englishGame').onclick=()=>startGame('english');el('pinyinGame').onclick=()=>startGame('pinyin');el('leaveGame').onclick=showGameHome;
+el('nextQuestion').onclick=()=>{if(gameNumber===9)finishGame();else{gameNumber++;renderQuestion()}};
+el('playAgain').onclick=()=>startGame(gameType);el('chooseGame').onclick=showGameHome;
+render();
 })();
 </script>
 </div>
