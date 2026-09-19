@@ -882,11 +882,11 @@ svg {
   <button id="gamesTab" class="btn" type="button" role="tab" aria-selected="false" aria-controls="gamesView">🎮 Games</button>
 </nav>
 <div id="practiceView" role="tabpanel" aria-labelledby="practiceTab">
-<form id="addCharacter" class="viz-controls" style="margin-bottom:16px;flex-wrap:wrap">
-  <label>Character <input id="newCharacter" class="form-input" maxlength="2" required style="width:90px;font-size:24px" aria-label="Chinese character"></label>
-  <label>Pinyin <input id="newPinyin" class="form-input" required placeholder="máng" style="width:110px"></label>
-  <label>Meaning <input id="newMeaning" class="form-input" required placeholder="busy" style="width:140px"></label>
-  <button class="btn btn-primary" type="submit">Add character</button><span id="addFeedback" role="status"></span>
+<form id="addCharacter" class="viz-controls" style="margin-bottom:16px;flex-wrap:wrap" novalidate>
+  <label>Character <input id="newCharacter" class="form-input" maxlength="2" style="width:90px;font-size:24px" aria-label="Chinese character" placeholder="字"></label>
+  <label>Pinyin <input id="newPinyin" class="form-input" placeholder="type pinyin" style="width:120px" aria-label="Pinyin"></label>
+  <label>Meaning <input id="newMeaning" class="form-input" placeholder="type English meaning" style="width:175px" aria-label="English meaning"></label>
+  <button class="btn btn-primary" type="submit">Add / open character</button><span id="addFeedback" role="status"></span>
 </form>
 <section aria-labelledby="old-expressions-heading" class="expression-pair" style="position:relative">
   <h2 id="old-expressions-heading" style="grid-column:1/-1;margin:0;font-size:20px">Two ways to say “old”</h2>
@@ -1096,7 +1096,7 @@ el('speak').onclick=()=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtt
 el('previous').onclick=()=>{if(index>0){index--;render()}};el('next').onclick=()=>{if(index<entries.length-1){index++;render()}};
 el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};
 el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};
-el('addCharacter').onsubmit=async e=>{e.preventDefault();const ch=el('newCharacter').value.trim(),py=el('newPinyin').value.trim(),meaning=el('newMeaning').value.trim();if([...ch].length!==1){el('addFeedback').textContent='Enter one character.';return}if(entries.some(item=>item[0]===ch)){el('addFeedback').textContent='That character is already in the list.';return}const item=[ch,py,meaning];entries.push(item);customEntries.push(item);localStorage.setItem('hanzi-custom-entries',JSON.stringify(customEntries));updateLessons();index=entries.length-1;el('addCharacter').reset();el('addFeedback').textContent=ch+' added. Loading stroke order…';render();const found=await ensureStrokeData(ch);if(entries[index]?.[0]===ch&&found){makeWriter();renderGuide();quizMode=true;el('feedback').textContent='Stroke order loaded. Draw stroke 1 whenever you are ready. Watch is optional.';}el('addFeedback').textContent=found?ch+' added with drawing practice.':ch+' added to reviews, but no stroke-order data was found.';};
+el('addCharacter').onsubmit=async e=>{e.preventDefault();const ch=el('newCharacter').value.trim(),py=el('newPinyin').value.trim(),meaning=el('newMeaning').value.trim();if(!ch){el('addFeedback').textContent='Type one Chinese character first.';el('newCharacter').focus();return}if([...ch].length!==1){el('addFeedback').textContent='Enter only one Chinese character.';el('newCharacter').focus();return}const existingIndex=entries.findIndex(item=>item[0]===ch);if(existingIndex!==-1){index=existingIndex;render();el('addCharacter').reset();el('addFeedback').textContent=ch+' is already in your list — I opened it for you.';return}if(!py){el('addFeedback').textContent='Now type the pinyin for '+ch+'.';el('newPinyin').focus();return}if(!meaning){el('addFeedback').textContent='Now type the English meaning for '+ch+'.';el('newMeaning').focus();return}const item=[ch,py,meaning];entries.push(item);customEntries.push(item);localStorage.setItem('hanzi-custom-entries',JSON.stringify(customEntries));updateLessons();index=entries.length-1;el('addCharacter').reset();el('addFeedback').textContent=ch+' added. Loading stroke order…';render();const found=await ensureStrokeData(ch);if(entries[index]?.[0]===ch&&found){makeWriter();renderGuide();quizMode=true;el('feedback').textContent='Stroke order loaded. Draw stroke 1 whenever you are ready. Watch is optional.';}el('addFeedback').textContent=found?ch+' added with drawing practice.':ch+' added to reviews, but no stroke-order data was found.';};
 el('englishGame').onclick=()=>startGame('english');el('pinyinGame').onclick=()=>startGame('pinyin');el('test8290').onclick=()=>startGame('english',entries.slice(81,90));el('leaveGame').onclick=showGameHome;
 el('nextQuestion').onclick=()=>{if(gameNumber===gameQuestions.length-1)finishGame();else{gameNumber++;renderQuestion()}};
 el('playAgain').onclick=()=>startGame(gameType,gamePool);el('chooseGame').onclick=showGameHome;
