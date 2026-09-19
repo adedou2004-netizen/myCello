@@ -954,6 +954,37 @@ const originalCount=entries.length;
 let customEntries=[];
 try { customEntries=JSON.parse(localStorage.getItem('hanzi-custom-entries')||'[]').filter(e=>Array.isArray(e)&&e.length===3&&e.every(x=>typeof x==='string')); } catch {}
 for(const e of customEntries) if(!entries.some(item=>item[0]===e[0])) entries.push(e);
+
+// Stroke-order data for characters added by the user.
+// Hanzi Writer Data uses the same {strokes, medians} format as the built-in course data.
+let customStrokeData={};
+try { customStrokeData=JSON.parse(localStorage.getItem('hanzi-custom-stroke-data')||'{}')||{}; } catch {}
+Object.assign(charData,customStrokeData);
+const pendingStrokeLoads=new Map();
+async function ensureStrokeData(ch){
+  if(charData[ch]?.strokes?.length && charData[ch]?.medians?.length) return true;
+  if(pendingStrokeLoads.has(ch)) return pendingStrokeLoads.get(ch);
+  const task=(async()=>{
+    try{
+      const url='https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/'+encodeURIComponent(ch)+'.json';
+      const response=await fetch(url,{cache:'force-cache'});
+      if(!response.ok) throw new Error('Stroke data not found');
+      const data=await response.json();
+      if(!Array.isArray(data.strokes)||!Array.isArray(data.medians)||!data.strokes.length||!data.medians.length) throw new Error('Invalid stroke data');
+      charData[ch]={strokes:data.strokes,medians:data.medians};
+      customStrokeData[ch]=charData[ch];
+      localStorage.setItem('hanzi-custom-stroke-data',JSON.stringify(customStrokeData));
+      return true;
+    }catch(err){
+      console.warn('Could not load stroke data for '+ch,err);
+      return false;
+    }finally{
+      pendingStrokeLoads.delete(ch);
+    }
+  })();
+  pendingStrokeLoads.set(ch,task);
+  return task;
+}
 let review={};
 try { review=JSON.parse(localStorage.getItem('hanzi-review')||'{}')||{}; } catch {}
 function reviewState(ch){return review[ch]||{streak:0,correct:0,seen:0};}
@@ -1039,7 +1070,22 @@ function renderLesson(){
 function render(){
   const [ch,py,en]=entries[index],lesson=Math.floor(index/10);el('bigchar').textContent=ch;el('pinyin').textContent=py;el('frenchsound').textContent=frenchSound(py);el('meaning').textContent=en;
   el('lessonLabel').textContent='Lesson '+(lesson+1)+' of '+Math.ceil(entries.length/10);el('lessonSelect').value=lesson;updateProgress();
-  el('previous').disabled=index===0;el('next').disabled=index===entries.length-1;el('feedback').textContent='Watch the stroke order, then choose Practice.';localStorage.setItem('hanzi-current',index);makeWriter();renderGuide();renderLesson();
+  el('previous').disabled=index===0;el('next').disabled=index===entries.length-1;localStorage.setItem('hanzi-current',index);makeWriter();renderGuide();renderLesson();
+  if(charData[ch]){
+    el('feedback').textContent='Watch the stroke order, then choose Practice.';
+  }else{
+    el('feedback').textContent='Loading stroke order for '+ch+'…';
+    const requestedIndex=index;
+    ensureStrokeData(ch).then(found=>{
+      if(index!==requestedIndex||entries[index][0]!==ch)return;
+      if(found){
+        makeWriter();renderGuide();
+        el('feedback').textContent='Stroke order loaded. Choose Watch or Practice.';
+      }else{
+        el('feedback').textContent='No stroke-order data was found for this character. You can still review it in Games.';
+      }
+    });
+  }
 }
 el('animate').onclick=()=>{if(!charData[entries[index][0]]){el('feedback').textContent='Stroke animation is unavailable for this added character.';return}makeWriter();const paths=[...el('writer').querySelectorAll('[data-stroke]')];el('feedback').textContent='Follow each stroke in numerical order.';paths.forEach((p,i)=>{animationTimers.push(setTimeout(()=>{p.setAttribute('fill','var(--foreground)');p.setAttribute('opacity','1')},i*500))});animationTimers.push(setTimeout(()=>{makeWriter();quizMode=true;el('feedback').textContent='Your turn—write stroke 1 inside the square.'},paths.length*500+650))};
 el('practice').onclick=()=>{if(!charData[entries[index][0]]){el('feedback').textContent='Writing practice is unavailable for this added character; you can still review it in Games.';return}makeWriter();quizMode=true;el('feedback').textContent='Write stroke 1. Start at the beginning and follow the correct direction.'};
@@ -1049,7 +1095,7 @@ el('speak').onclick=()=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtt
 el('previous').onclick=()=>{if(index>0){index--;render()}};el('next').onclick=()=>{if(index<entries.length-1){index++;render()}};
 el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};
 el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};
-el('addCharacter').onsubmit=e=>{e.preventDefault();const ch=el('newCharacter').value.trim(),py=el('newPinyin').value.trim(),meaning=el('newMeaning').value.trim();if([...ch].length!==1){el('addFeedback').textContent='Enter one character.';return}if(entries.some(item=>item[0]===ch)){el('addFeedback').textContent='That character is already in the list.';return}const item=[ch,py,meaning];entries.push(item);customEntries.push(item);localStorage.setItem('hanzi-custom-entries',JSON.stringify(customEntries));updateLessons();index=entries.length-1;render();el('addCharacter').reset();el('addFeedback').textContent=ch+' added to your reviews.';};
+el('addCharacter').onsubmit=async e=>{e.preventDefault();const ch=el('newCharacter').value.trim(),py=el('newPinyin').value.trim(),meaning=el('newMeaning').value.trim();if([...ch].length!==1){el('addFeedback').textContent='Enter one character.';return}if(entries.some(item=>item[0]===ch)){el('addFeedback').textContent='That character is already in the list.';return}const item=[ch,py,meaning];entries.push(item);customEntries.push(item);localStorage.setItem('hanzi-custom-entries',JSON.stringify(customEntries));updateLessons();index=entries.length-1;el('addCharacter').reset();el('addFeedback').textContent=ch+' added. Loading stroke order…';render();const found=await ensureStrokeData(ch);if(entries[index]?.[0]===ch&&found){makeWriter();renderGuide();el('feedback').textContent='Stroke order loaded. Choose Watch or Practice.';}el('addFeedback').textContent=found?ch+' added with drawing practice.':ch+' added to reviews, but no stroke-order data was found.';};
 el('englishGame').onclick=()=>startGame('english');el('pinyinGame').onclick=()=>startGame('pinyin');el('test8290').onclick=()=>startGame('english',entries.slice(81,90));el('leaveGame').onclick=showGameHome;
 el('nextQuestion').onclick=()=>{if(gameNumber===gameQuestions.length-1)finishGame();else{gameNumber++;renderQuestion()}};
 el('playAgain').onclick=()=>startGame(gameType,gamePool);el('chooseGame').onclick=showGameHome;
