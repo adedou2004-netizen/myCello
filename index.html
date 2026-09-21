@@ -857,6 +857,7 @@ svg {
 #hanzi-course .expression-card .word-pinyin{display:block;font-size:22px;color:var(--viz-series-1)}
 #hanzi-course .expression-card .word-clue{display:block;font-size:17px;font-weight:700;margin:4px 0}
 #hanzi-course .expression-card .word-meaning{display:block;color:var(--muted-foreground)}
+#hanzi-course .expression-card .expression-sound{margin-top:10px}
 @media(max-width:620px){#hanzi-course .expression-pair{grid-template-columns:1fr}}
 #hanzi-course [hidden]{display:none!important}
 #hanzi-course .game-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
@@ -1154,6 +1155,25 @@ el('practice').onclick=()=>{if(!charData[entries[index][0]]){el('feedback').text
 el('hint').onclick=()=>{if(!charData[entries[index][0]])return;flashStroke(strokeIndex);el('feedback').textContent='The highlighted shape is stroke '+(strokeIndex+1)+'.'};
 el('clear').onclick=()=>{makeWriter();if(charData[entries[index][0]])quizMode=true;el('feedback').textContent='Cleared. Draw stroke 1 whenever you are ready.';};
 el('speak').onclick=()=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(entries[index][0]);u.lang='zh-CN';u.rate=.75;speechSynthesis.speak(u)};
+document.querySelectorAll('.expression-card').forEach(card=>{
+  if(card.querySelector('.expression-sound'))return;
+  const word=card.querySelector('.word');
+  if(!word)return;
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='btn expression-sound';
+  button.textContent='🔊 Hear it';
+  button.setAttribute('aria-label','Hear '+word.textContent.trim()+' in Mandarin');
+  button.onclick=()=>{
+    speechSynthesis.cancel();
+    const text=word.textContent.trim().replaceAll('…',' ');
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-CN';
+    u.rate=.7;
+    speechSynthesis.speak(u);
+  };
+  card.appendChild(button);
+});
 el('previous').onclick=()=>{if(index>0){index--;render()}};el('next').onclick=()=>{if(index<entries.length-1){index++;render()}};
 el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};
 el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};
