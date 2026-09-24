@@ -14,6 +14,13 @@ button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
 #memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
 #photoBar{padding:7px 10px;background:#eef6ff;border-bottom:1px solid #bfdbfe;text-align:center}
 #photoStatus{margin-left:8px;font-size:13px;color:#475467}
+#photoPicker{display:none;padding:10px;background:#eef6ff;border-bottom:1px solid #bfdbfe}
+#photoPicker.open{display:block}
+#photoChoices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.photoChoice{min-height:42px;font-size:22px;padding:7px 12px}
+.photoChoice.phrase{font-size:18px}
+#photoManual{width:100%;margin-top:10px;padding:10px;border:1px solid #98a2b3;border-radius:10px;font-size:20px}
+.photoActions{display:flex;gap:8px;margin-top:8px}.photoActions button{min-height:42px;padding:7px 12px}
 #memoryBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
 iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 66px);background:#fff}
 dialog{border:0;border-radius:18px;padding:0;max-width:min(94vw,720px);width:720px;box-shadow:0 20px 60px #0005}
@@ -32,6 +39,12 @@ dialog::backdrop{background:#0009}
 <button id="games" role="tab" aria-selected="false">🎮 Games</button>
 </nav>
 <div id="photoBar"><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden><span id="photoStatus"></span></div>
+<div id="photoPicker">
+ <strong>Tap exactly what you want to add</strong>
+ <div id="photoChoices"></div>
+ <input id="photoManual" type="text" inputmode="text" placeholder="Or edit / paste the Chinese you want">
+ <div class="photoActions"><button id="photoUse" type="button">Use selected text</button><button id="photoCancel" type="button">Cancel</button></div>
+</div>
 <div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
 <iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
 <dialog id="memoryDialog">
@@ -49,30 +62,59 @@ const memoryBar=document.getElementById("memoryBar");
 const memoryBtn=document.getElementById("memoryBtn");
 const memoryDialog=document.getElementById("memoryDialog");
 const photoBtn=document.getElementById("photoBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
+const photoPicker=document.getElementById("photoPicker"),photoChoices=document.getElementById("photoChoices"),photoManual=document.getElementById("photoManual");
 let mode="learn", cards=new Map(), currentCard=null, lastSubject="";
 
+function chineseRuns(raw){
+ return (raw.match(/[\u3400-\u9fff]+/g)||[]).filter(Boolean);
+}
+function photoCandidates(raw){
+ const runs=chineseRuns(raw),seen=new Set(),out=[];
+ const add=(text,type)=>{text=(text||"").trim();if(text&&!seen.has(text)){seen.add(text);out.push({text,type})}};
+ runs.forEach(run=>{
+  [...run].forEach(ch=>add(ch,"character"));
+  if([...run].length>1)add(run,"phrase");
+  for(let n=2;n<=4;n++)for(let i=0;i+n<=[...run].length;i++)add([...run].slice(i,i+n).join(""),"phrase");
+ });
+ return out.slice(0,80);
+}
+function showPhotoChoices(raw){
+ const items=photoCandidates(raw);
+ photoChoices.innerHTML="";
+ items.forEach(item=>{
+  const b=document.createElement("button");b.type="button";b.className="photoChoice "+item.type;b.textContent=item.text;
+  b.onclick=()=>{photoManual.value=item.text;[...photoChoices.children].forEach(x=>x.setAttribute("aria-selected","false"));b.setAttribute("aria-selected","true")};
+  photoChoices.appendChild(b);
+ });
+ photoManual.value="";
+ photoPicker.classList.add("open");
+ photoStatus.textContent=items.length?"Choose one character, word, or expression below.":"I could not find Chinese text. You can type it below.";
+}
+async function putPhotoText(text){
+ text=(text||"").trim();if(!text)return;
+ photoPicker.classList.remove("open");
+ if([...text].length===1){
+  if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
+  const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
+  if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it, then add it.";return}
+ }
+ if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
+ const doc=frame.contentDocument;
+ const input=["newExpression","addWord","word","expression","newWord"].map(id=>doc&&doc.getElementById(id)).filter(Boolean)[0];
+ if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it before saving."}
+ else photoStatus.textContent="Selected: "+text+". Copy it into the expression form.";
+}
 photoBtn.onclick=()=>photoInput.click();
 photoInput.onchange=async()=>{
  const file=photoInput.files&&photoInput.files[0];if(!file)return;
- photoStatus.textContent="Reading photo…";
- try{
-  const result=await Tesseract.recognize(file,"chi_sim+eng");
-  const raw=(result.data.text||"").trim();
-  const chinese=(raw.match(/[\u3400-\u9fff]+/g)||[]).join("");
-  if(!chinese){photoStatus.textContent="I could not find Chinese text. You can still type it manually.";return}
-  const text=chinese.slice(0,20);
-  if(mode==="learn"&&[...text].length===1){
-   const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
-   if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Found "+text+" — check it, then add it.";return}
-  }
-  if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
-  const doc=frame.contentDocument;
-  const candidates=["newExpression","addWord","word","expression","newWord"].map(id=>doc&&doc.getElementById(id)).filter(Boolean);
-  if(candidates[0]){candidates[0].value=text;candidates[0].dispatchEvent(new Event("input",{bubbles:true}));candidates[0].scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Found "+text+" — check it before saving."}
-  else {photoStatus.textContent="Found: "+text+". Copy it into the expression form."}
- }catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Please try a clearer picture."}
+ photoStatus.textContent="Reading photo…";photoPicker.classList.remove("open");
+ try{const result=await Tesseract.recognize(file,"chi_sim+eng");showPhotoChoices((result.data.text||"").trim())}
+ catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Please try a clearer picture."}
  finally{photoInput.value=""}
 };
+document.getElementById("photoUse").onclick=()=>putPhotoText(photoManual.value);
+document.getElementById("photoCancel").onclick=()=>{photoPicker.classList.remove("open");photoStatus.textContent=""};
+
 async function loadCards(){
  try{
   const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_type,subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
