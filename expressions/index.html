@@ -9,7 +9,7 @@
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f7fb;color:#17202a}
 *{box-sizing:border-box}body{margin:0}header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #e4e7ec;padding:12px 16px}
-h1{margin:0;font-size:22px}.sub{color:#667085;font-size:13px;margin-top:2px}.wrap{max-width:760px;margin:auto;padding:14px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap} .homebtn{border:1px solid #d0d5dd;background:#fff;border-radius:12px;padding:9px 12px;font:600 14px system-ui;cursor:pointer;color:#111827} .headtext{min-width:0} h1{margin:0;font-size:22px}.sub{color:#667085;font-size:13px;margin-top:2px}.wrap{max-width:760px;margin:auto;padding:14px}
 .tabs,.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tabs{margin:0 0 14px}.tabs button,.btn{border:1px solid #d0d5dd;background:#fff;border-radius:12px;padding:10px 13px;font:inherit}.tabs button.active,.btn.primary{background:#111827;color:#fff;border-color:#111827}
 .card{background:#fff;border:1px solid #e4e7ec;border-radius:18px;padding:16px;margin:12px 0}.big{font-size:clamp(46px,13vw,76px);line-height:1.25;text-align:center}.pin{font-size:22px;text-align:center;color:#2563eb}.clue{text-align:center;font-weight:700;margin-top:4px}.meaning{text-align:center;color:#475467;margin-top:4px}
 label{display:block;font-size:13px;color:#475467;margin:8px 0 4px}input,textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;font:inherit;background:#fff;color:#111827}textarea{min-height:70px}
@@ -22,7 +22,7 @@ label{display:block;font-size:13px;color:#475467;margin:8px 0 4px}input,textarea
 </style>
 </head>
 <body>
-<header><h1>Mandarin Expressions</h1><div class="sub">Expressions • handwriting • camera/screenshot import • spaced repetition</div></header>
+<header><button id="mainHome" class="homebtn" type="button">← Main</button><div class="headtext"><h1>Mandarin Expressions</h1><div class="sub">Expressions • handwriting • camera/screenshot import • spaced repetition</div></div></header>
 <div class="wrap">
 <nav class="tabs">
 <button data-tab="review" class="active">Review</button><button data-tab="write">Write</button><button data-tab="add">Add</button><button data-tab="library">Library</button>
@@ -101,6 +101,8 @@ function state(x){if(x.streak<3)return x.streak?"learning":"new";return "spaced"
 function isDue(x){return x.streak<3 || !x.due || x.due<=Date.now()}
 const intervals=[1,3,7,14,30,60,120];
 let queue=[],qi=0,current=null,writer=null,writeIndex=0,charIndex=0;
+
+$("#mainHome").onclick=()=>{try{if(window.parent!==window&&typeof window.parent.select==="function"){window.parent.select("learn");return}}catch(e){} location.href="../mandarin/";};
 
 $$("[data-tab]").forEach(b=>b.onclick=()=>{const t=b.dataset.tab;$$("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));$$(".tab").forEach(s=>s.classList.toggle("hidden",s.id!==t));if(t==="review")buildQueue();if(t==="write")loadWrite();if(t==="library")renderLibrary()});
 
