@@ -45,7 +45,7 @@ label{display:block;font-size:13px;color:#475467;margin:8px 0 4px}input,textarea
 <div class="card"><div id="wWord" class="big"></div><div id="wPin" class="pin"></div><div id="wMeaning" class="meaning"></div>
 <div id="charPick" class="charpick" style="margin-top:12px"></div>
 <div id="writer"></div>
-<div class="row" style="justify-content:center"><button id="animate" class="btn">▶ Watch</button><button id="quiz" class="btn primary">✍ Practice</button><button id="nextExpr" class="btn">Next expression →</button></div>
+<div class="row" style="justify-content:center"><button id="animate" class="btn">▶ Watch</button><button id="nextExpr" class="btn">Next expression →</button></div>
 <div id="writeStatus" class="status" style="text-align:center"></div></div>
 </section>
 
@@ -132,9 +132,9 @@ function loadWrite(){
  if(!data.length)return;writeIndex%=data.length;const x=data[writeIndex];$("#wWord").textContent=x.word;$("#wPin").textContent=x.pinyin;$("#wMeaning").textContent=x.meaning;
  const chars=chineseChars(x.word);$("#charPick").innerHTML="";chars.forEach((c,i)=>{const b=document.createElement("button");b.className="btn";b.textContent=c;b.onclick=()=>openChar(i);$("#charPick").appendChild(b)});openChar(Math.min(charIndex,chars.length-1));
 }
-function openChar(i){charIndex=Math.max(0,i);const x=data[writeIndex],chars=chineseChars(x.word);if(!chars.length)return;const c=chars[charIndex];$("#writer").innerHTML="";$("#writeStatus").textContent="Character "+(charIndex+1)+" of "+chars.length;try{writer=HanziWriter.create("writer",c,{width:326,height:326,padding:18,showOutline:true,showCharacter:false,strokeAnimationSpeed:1,delayBetweenStrokes:180});}catch(e){$("#writeStatus").textContent="Writing data is not available for "+c}}
-$("#animate").onclick=()=>writer&&writer.animateCharacter();
-$("#quiz").onclick=()=>{if(!writer)return;writer.quiz({showHintAfterMisses:2,onComplete:()=>{$("#writeStatus").textContent="✓ Character written. Choose the next character, or continue.";const chars=chineseChars(data[writeIndex].word);if(charIndex<chars.length-1)setTimeout(()=>openChar(charIndex+1),450)}})};
+function startWritingQuiz(){if(!writer)return;writer.quiz({showHintAfterMisses:2,onComplete:()=>{$("#writeStatus").textContent="✓ Character written. Choose the next character, or continue.";const chars=chineseChars(data[writeIndex].word);if(charIndex<chars.length-1)setTimeout(()=>openChar(charIndex+1),450)}})}
+function openChar(i){charIndex=Math.max(0,i);const x=data[writeIndex],chars=chineseChars(x.word);if(!chars.length)return;const c=chars[charIndex];$("#writer").innerHTML="";$("#writeStatus").textContent="Character "+(charIndex+1)+" of "+chars.length+" · start writing";try{writer=HanziWriter.create("writer",c,{width:326,height:326,padding:18,showOutline:true,showCharacter:false,strokeAnimationSpeed:1,delayBetweenStrokes:180});startWritingQuiz()}catch(e){$("#writeStatus").textContent="Writing data is not available for "+c}}
+$("#animate").onclick=()=>{if(!writer)return;writer.cancelQuiz();writer.animateCharacter({onComplete:()=>{setTimeout(startWritingQuiz,250)}})};
 $("#nextExpr").onclick=()=>{writeIndex=(writeIndex+1)%data.length;charIndex=0;loadWrite()};
 
 $("#scan").onclick=async()=>{
