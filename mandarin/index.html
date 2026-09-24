@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mandarin Learning</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#111827}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{display:flex;flex-direction:column}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:8px;background:#f2f4f7;border-bottom:1px solid #e4e7ec;position:sticky;top:0;z-index:10}
+button{min-height:48px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
+button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
+iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 66px);background:#fff}
+@media(max-width:430px){button{font-size:13px;padding:7px 4px}nav{gap:5px;padding:6px}}
+</style>
+</head>
+<body>
+<nav role="tablist" aria-label="Mandarin learning sections">
+<button id="learn" role="tab" aria-selected="true">✍ Learn &amp; write</button>
+<button id="games" role="tab" aria-selected="false">🎮 Games</button>
+<button id="expressions" role="tab" aria-selected="false">💬 Expressions</button>
+</nav>
+<iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
+<script>
+const frame=document.getElementById("app");
+const buttons=[...document.querySelectorAll("nav button")];
+let mode="learn";
+
+function select(which){
+ mode=which;
+ buttons.forEach(b=>b.setAttribute("aria-selected",String(b.id===which)));
+ if(which==="expressions"){
+   if(!/\/expressions\/?(?:index\.html)?(?:[?#].*)?$/.test(frame.src)){
+     frame.src="../expressions/";
+   }
+ } else {
+   const isMain=!frame.src.includes("/expressions/");
+   if(!isMain){ frame.src="../index.html"; }
+   else{ activateMain(which); }
+ }
+}
+function cleanOldExpressionCards(doc){
+ const ids=["old-expressions-heading","lesson-expressions-heading"];
+ ids.forEach(id=>{
+   const h=doc.getElementById(id);
+   if(h && h.parentElement) h.parentElement.style.display="none";
+ });
+}
+function activateMain(which){
+ try{
+  const doc=frame.contentDocument;
+  if(!doc)return;
+  cleanOldExpressionCards(doc);
+  const target=doc.getElementById(which==="games"?"gamesTab":"practiceTab");
+  if(target) target.click();
+ }catch(e){}
+}
+frame.addEventListener("load",()=>{
+ if(mode!=="expressions") activateMain(mode);
+});
+buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
+</script>
+</body>
+</html>
