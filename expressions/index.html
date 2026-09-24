@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mandarin Expressions</title>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f7fb;color:#17202a}
+*{box-sizing:border-box}body{margin:0}header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #e4e7ec;padding:12px 16px}
+h1{margin:0;font-size:22px}.sub{color:#667085;font-size:13px;margin-top:2px}.wrap{max-width:760px;margin:auto;padding:14px}
+.tabs,.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tabs{margin:0 0 14px}.tabs button,.btn{border:1px solid #d0d5dd;background:#fff;border-radius:12px;padding:10px 13px;font:inherit}.tabs button.active,.btn.primary{background:#111827;color:#fff;border-color:#111827}
+.card{background:#fff;border:1px solid #e4e7ec;border-radius:18px;padding:16px;margin:12px 0}.big{font-size:clamp(46px,13vw,76px);line-height:1.25;text-align:center}.pin{font-size:22px;text-align:center;color:#2563eb}.clue{text-align:center;font-weight:700;margin-top:4px}.meaning{text-align:center;color:#475467;margin-top:4px}
+label{display:block;font-size:13px;color:#475467;margin:8px 0 4px}input,textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;font:inherit;background:#fff;color:#111827}textarea{min-height:70px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.muted{color:#667085;font-size:13px}.badge{display:inline-block;padding:4px 8px;background:#eef2ff;border-radius:999px;font-size:12px;margin:2px}
+#writer{width:min(82vw,330px);height:min(82vw,330px);margin:14px auto;border:2px solid #d0d5dd;border-radius:12px;background:#fff}.charpick{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}.charpick button{font-size:28px;min-width:48px}
+.listitem{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 0;border-bottom:1px solid #eee}.listitem:last-child{border:0}.word{font-size:30px}.hidden{display:none!important}.status{font-weight:700;margin-top:8px}.good{color:#067647}.warn{color:#b54708}
+.progress{height:9px;background:#eaecf0;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:#111827}
+.photo{border:2px dashed #d0d5dd;border-radius:14px;padding:14px;text-align:center}.photo input{border:0;padding:8px 0}.ocr{font-size:28px;text-align:center}
+@media(max-width:560px){.grid,.grid3{grid-template-columns:1fr}.wrap{padding:10px}.card{padding:13px}}
+</style>
+</head>
+<body>
+<header><h1>Mandarin Expressions</h1><div class="sub">Expressions • handwriting • camera/screenshot import • spaced repetition</div></header>
+<div class="wrap">
+<nav class="tabs">
+<button data-tab="review" class="active">Review</button><button data-tab="write">Write</button><button data-tab="add">Add</button><button data-tab="library">Library</button>
+</nav>
+
+<section id="review" class="tab">
+<div class="card">
+<div class="row"><select id="filter" style="max-width:190px"><option value="due">Due now</option><option value="learning">Learning</option><option value="new">New</option><option value="all">All</option></select><button class="btn" id="shuffle">Shuffle</button></div>
+<div class="progress" style="margin-top:12px"><span id="prog" style="width:0"></span></div><div id="reviewCount" class="muted" style="margin-top:5px"></div>
+</div>
+<div id="reviewCard" class="card">
+<div id="rWord" class="big"></div><div id="rPin" class="pin hidden"></div><div id="rClue" class="clue hidden"></div><div id="rMeaning" class="meaning hidden"></div>
+<div class="row" style="justify-content:center;margin-top:14px"><button class="btn" id="hear">🔊 Hear</button><button class="btn" id="reveal">Show answer</button></div>
+<div id="grade" class="row hidden" style="justify-content:center;margin-top:12px"><button class="btn" id="again">Again</button><button class="btn primary" id="gotit">✓ I knew it</button></div>
+<div id="rStatus" class="status"></div>
+</div>
+</section>
+
+<section id="write" class="tab hidden">
+<div class="card"><div id="wWord" class="big"></div><div id="wPin" class="pin"></div><div id="wMeaning" class="meaning"></div>
+<div id="charPick" class="charpick" style="margin-top:12px"></div>
+<div id="writer"></div>
+<div class="row" style="justify-content:center"><button id="animate" class="btn">▶ Watch</button><button id="quiz" class="btn primary">✍ Practice</button><button id="nextExpr" class="btn">Next expression →</button></div>
+<div id="writeStatus" class="status" style="text-align:center"></div></div>
+</section>
+
+<section id="add" class="tab hidden">
+<div class="card">
+<h2 style="margin-top:0">Add an expression</h2>
+<div class="photo"><strong>Take a photo or choose a screenshot</strong><div class="muted">The app will try to read Chinese characters from the image.</div><input id="imageInput" type="file" accept="image/*" capture="environment"><button id="scan" class="btn">Read image</button><div id="scanStatus" class="muted"></div><div id="ocrText" class="ocr"></div></div>
+<div class="grid"><div><label>Chinese expression</label><input id="aWord" placeholder="例如：我觉得"></div><div><label>Pinyin</label><input id="aPin" placeholder="wǒ juéde"></div></div>
+<div class="grid"><div><label>French-ear sound</label><input id="aClue" placeholder="wo djoué-de"></div><div><label>English meaning</label><input id="aMeaning" placeholder="I think / I feel"></div></div>
+<button id="addBtn" class="btn primary" style="margin-top:12px">Add expression</button><div id="addStatus" class="status"></div>
+</div>
+</section>
+
+<section id="library" class="tab hidden">
+<div class="card"><div class="row"><strong id="libCount"></strong><select id="libFilter" style="max-width:170px"><option value="all">All</option><option value="new">New</option><option value="learning">Learning</option><option value="spaced">Spaced repetition</option></select></div><div id="libraryList"></div></div>
+</section>
+</div>
+
+<script>
+const seed=[
+["旧书","jiù shū","djiòu SHou","an old or used book"],
+["老人","lǎo rén","lǎo Ren","an elderly person"],
+["回来","huílái","houé-laï","come back / return"],
+["以后","yǐhòu","yi-hô","after / afterward"],
+["三个字","sān ge zì","san gue dz","three written characters"],
+["进来","jìnlái","djinn-laï","come in"],
+["外面","wàimiàn","waï-mienne","outside"],
+["里面","lǐmiàn","li-mienne","inside"],
+["还没到","hái méi dào","haï méï dao","has not arrived yet"],
+["已经来了","yǐjīng lái le","yi-djing laï le","has already come / arrived"],
+["我觉得","wǒ juéde","wo djoué-de","I think / I feel"],
+["很好看","hěn hǎokàn","heune hao-kane","very good to read / enjoyable / nice-looking"],
+["看见","kànjiàn","kane-djiène","see / catch sight of"],
+["后面","hòumiàn","hô-mienne","behind / at the back"],
+["听见","tīngjiàn","ting-djiène","hear"],
+["不知道","bù zhīdào","bou dje-dao","do not know"],
+["什么时候","shénme shíhou","cheun-me che-hô","when"],
+["出去","chūqù","tchou-tchu","go out"],
+["走一走","zǒu yì zǒu","dzô yi dzô","walk a little / take a short walk"],
+["虽然…还是…","suīrán… háishi…","soué-rane… haï-che…","although… still…"]
+];
+const KEY="mandarinExpressionsV1";
+let data=JSON.parse(localStorage.getItem(KEY)||"null");
+if(!Array.isArray(data)||!data.length)data=seed.map((x,i)=>({id:"seed"+i,word:x[0],pinyin:x[1],clue:x[2],meaning:x[3],streak:0,stage:0,due:0,seen:0}));
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function chineseChars(s){return [...s].filter(c=>/[\u3400-\u9FFF]/.test(c))}
+function state(x){if(x.streak<3)return x.streak?"learning":"new";return "spaced"}
+function isDue(x){return x.streak<3 || !x.due || x.due<=Date.now()}
+const intervals=[1,3,7,14,30,60,120];
+let queue=[],qi=0,current=null,writer=null,writeIndex=0,charIndex=0;
+
+$$("[data-tab]").forEach(b=>b.onclick=()=>{const t=b.dataset.tab;$$("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));$$(".tab").forEach(s=>s.classList.toggle("hidden",s.id!==t));if(t==="review")buildQueue();if(t==="write")loadWrite();if(t==="library")renderLibrary()});
+
+function buildQueue(){
+ const f=$("#filter").value;
+ queue=data.filter(x=>f==="all"||f==="due"&&isDue(x)||f==="new"&&state(x)==="new"||f==="learning"&&state(x)==="learning");
+ if(!queue.length && f==="due") queue=data.filter(isDue);
+ qi=0;showReview();
+}
+function showReview(){
+ current=queue[qi]||null;
+ $("#rPin").classList.add("hidden");$("#rClue").classList.add("hidden");$("#rMeaning").classList.add("hidden");$("#grade").classList.add("hidden");$("#rStatus").textContent="";
+ if(!current){$("#rWord").textContent="✓ Nothing due";$("#reviewCount").textContent="Choose All, New, or Learning to keep practicing.";$("#prog").style.width="100%";return}
+ $("#rWord").textContent=current.word;$("#rPin").textContent=current.pinyin;$("#rClue").textContent=current.clue;$("#rMeaning").textContent=current.meaning;
+ $("#reviewCount").textContent=(qi+1)+" of "+queue.length+" · "+(current.streak<3?current.streak+"/3 correct before spaced repetition":"spaced repetition stage "+current.stage);
+ $("#prog").style.width=((qi)/Math.max(1,queue.length)*100)+"%";
+}
+$("#filter").onchange=buildQueue;
+$("#shuffle").onclick=()=>{queue.sort(()=>Math.random()-.5);qi=0;showReview()};
+$("#reveal").onclick=()=>{if(!current)return;["#rPin","#rClue","#rMeaning","#grade"].forEach(s=>$(s).classList.remove("hidden"))};
+$("#hear").onclick=()=>{if(!current)return;const u=new SpeechSynthesisUtterance(current.word);u.lang="zh-CN";u.rate=.72;speechSynthesis.cancel();speechSynthesis.speak(u)};
+function advance(){qi++;if(qi>=queue.length)buildQueue();else showReview()}
+$("#gotit").onclick=()=>{
+ if(!current)return;
+ current.seen=(current.seen||0)+1;
+ if(current.streak<3){current.streak++;if(current.streak===3){current.stage=1;current.due=Date.now()+86400000;$("#rStatus").textContent="✓ Three correct! This expression has entered spaced repetition.";$("#rStatus").className="status good"}}
+ else{current.stage=Math.min((current.stage||1)+1,intervals.length);current.due=Date.now()+intervals[Math.min(current.stage-1,intervals.length-1)]*86400000}
+ save();setTimeout(advance, current.streak===3?700:100)
+};
+$("#again").onclick=()=>{if(!current)return;current.seen=(current.seen||0)+1;if(current.streak<3)current.streak=0;else{current.stage=Math.max(1,(current.stage||1)-1);current.due=Date.now()+86400000}save();advance()};
+
+function loadWrite(){
+ if(!data.length)return;writeIndex%=data.length;const x=data[writeIndex];$("#wWord").textContent=x.word;$("#wPin").textContent=x.pinyin;$("#wMeaning").textContent=x.meaning;
+ const chars=chineseChars(x.word);$("#charPick").innerHTML="";chars.forEach((c,i)=>{const b=document.createElement("button");b.className="btn";b.textContent=c;b.onclick=()=>openChar(i);$("#charPick").appendChild(b)});openChar(Math.min(charIndex,chars.length-1));
+}
+function openChar(i){charIndex=Math.max(0,i);const x=data[writeIndex],chars=chineseChars(x.word);if(!chars.length)return;const c=chars[charIndex];$("#writer").innerHTML="";$("#writeStatus").textContent="Character "+(charIndex+1)+" of "+chars.length;try{writer=HanziWriter.create("writer",c,{width:326,height:326,padding:18,showOutline:true,showCharacter:false,strokeAnimationSpeed:1,delayBetweenStrokes:180});}catch(e){$("#writeStatus").textContent="Writing data is not available for "+c}}
+$("#animate").onclick=()=>writer&&writer.animateCharacter();
+$("#quiz").onclick=()=>{if(!writer)return;writer.quiz({showHintAfterMisses:2,onComplete:()=>{$("#writeStatus").textContent="✓ Character written. Choose the next character, or continue.";const chars=chineseChars(data[writeIndex].word);if(charIndex<chars.length-1)setTimeout(()=>openChar(charIndex+1),450)}})};
+$("#nextExpr").onclick=()=>{writeIndex=(writeIndex+1)%data.length;charIndex=0;loadWrite()};
+
+$("#scan").onclick=async()=>{
+ const f=$("#imageInput").files[0];if(!f){$("#scanStatus").textContent="Choose a photo or screenshot first.";return}
+ $("#scanStatus").textContent="Reading image…";$("#ocrText").textContent="";
+ try{
+  const r=await Tesseract.recognize(f,"chi_sim",{logger:m=>{if(m.status==="recognizing text")$("#scanStatus").textContent="Reading image… "+Math.round((m.progress||0)*100)+"%"}});
+  const found=(r.data.text.match(/[\u3400-\u9FFF]+/g)||[]).join("");
+  $("#ocrText").textContent=found||"No Chinese characters found";
+  if(found)$("#aWord").value=found.slice(0,20);
+  $("#scanStatus").textContent=found?"Check the characters, then add pinyin and meaning.":"Try cropping closer to the Chinese text.";
+ }catch(e){$("#scanStatus").textContent="I couldn't read that image. You can still type or paste the characters below."}
+};
+$("#addBtn").onclick=()=>{
+ const word=$("#aWord").value.trim(),pinyin=$("#aPin").value.trim(),clue=$("#aClue").value.trim(),meaning=$("#aMeaning").value.trim();
+ if(!word||!chineseChars(word).length){$("#addStatus").textContent="Add at least one Chinese character.";$("#addStatus").className="status warn";return}
+ if(data.some(x=>x.word===word)){ $("#addStatus").textContent="That expression is already in your library.";$("#addStatus").className="status warn";return}
+ data.unshift({id:"u"+Date.now(),word,pinyin,clue,meaning,streak:0,stage:0,due:0,seen:0});save();$("#addStatus").textContent="✓ Added. It is now in New and will start at 0/3.";$("#addStatus").className="status good";["#aWord","#aPin","#aClue","#aMeaning"].forEach(s=>$(s).value="");renderLibrary()
+};
+
+function renderLibrary(){
+ const f=$("#libFilter").value,rows=data.filter(x=>f==="all"||f==="spaced"&&state(x)==="spaced"||state(x)===f);
+ $("#libCount").textContent=rows.length+" expressions";
+ $("#libraryList").innerHTML="";
+ rows.forEach(x=>{const d=document.createElement("div");d.className="listitem";let status=x.streak<3?x.streak+"/3 correct":"Spaced · stage "+x.stage;if(x.streak>=3&&x.due)status+=" · due "+new Date(x.due).toLocaleDateString();d.innerHTML='<div><div class="word">'+x.word+'</div><div>'+x.pinyin+'</div><div class="muted">'+x.clue+' · '+x.meaning+'</div><span class="badge">'+status+'</span></div><button class="btn" data-del="'+x.id+'">Delete</button>';$("#libraryList").appendChild(d)});
+ $$("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("Delete this expression?")){data=data.filter(x=>x.id!==b.dataset.del);save();renderLibrary()}});
+}
+$("#libFilter").onchange=renderLibrary;
+buildQueue();save();
+</script>
+</body>
+</html>
