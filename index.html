@@ -848,7 +848,9 @@ svg {
 #hanzi-course .guide div{display:grid;place-items:center;aspect-ratio:1;background:var(--muted);color:var(--muted-foreground);border-radius:6px;position:relative}
 #hanzi-course .guide svg{width:100%;height:100%}
 #hanzi-course .guide span{position:absolute;inset:3px auto auto 5px;font-size:11px}
-#hanzi-course .app-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;background:var(--muted);border-radius:14px}
+#hanzi-course .app-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:5px;background:var(--muted);border-radius:14px}
+#hanzi-course #old-expressions-heading,#hanzi-course #lesson-expressions-heading{display:none}
+#hanzi-course #old-expressions-heading+*,#hanzi-course #lesson-expressions-heading+*{}
 #hanzi-course .app-tabs .btn{min-height:46px;font-size:16px}
 #hanzi-course .app-tabs .btn[aria-selected="true"]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
 #hanzi-course .expression-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 18px}
@@ -881,6 +883,7 @@ svg {
 <nav class="app-tabs" aria-label="Mandarin app sections">
   <button id="practiceTab" class="btn" type="button" role="tab" aria-selected="true" aria-controls="practiceView">✍️ Learn &amp; write</button>
   <button id="gamesTab" class="btn" type="button" role="tab" aria-selected="false" aria-controls="gamesView">🎮 Games</button>
+  <button id="expressionsTab" class="btn" type="button" role="tab" aria-selected="false">💬 Expressions</button>
 </nav>
 <div id="practiceView" role="tabpanel" aria-labelledby="practiceTab">
 <form id="addCharacter" class="viz-controls" style="margin-bottom:16px;flex-wrap:wrap" novalidate>
@@ -889,32 +892,6 @@ svg {
   <label>Meaning <input id="newMeaning" class="form-input" placeholder="type English meaning" style="width:175px" aria-label="English meaning"></label>
   <button class="btn btn-primary" type="submit">Add / open character</button><span id="addFeedback" role="status"></span>
 </form>
-<section aria-labelledby="old-expressions-heading" class="expression-pair" style="position:relative">
-  <h2 id="old-expressions-heading" style="grid-column:1/-1;margin:0;font-size:20px">Two ways to say “old”</h2>
-  <div class="expression-card"><span class="word" lang="zh-Hans">旧书</span><span class="word-pinyin">jiù shū</span><span class="word-clue">djiòu SHou</span><span class="word-meaning">an old or used book · 旧 describes a thing that is no longer new.</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">老人</span><span class="word-pinyin">lǎo rén</span><span class="word-clue">lǎo Ren</span><span class="word-meaning">an elderly person · 老 describes age.</span></div>
-</section>
-<section aria-labelledby="lesson-expressions-heading" class="expression-pair" style="position:relative">
-  <h2 id="lesson-expressions-heading" style="grid-column:1/-1;margin:0;font-size:20px">Useful expressions from the hard translation lesson</h2>
-  <div class="expression-card"><span class="word" lang="zh-Hans">回来</span><span class="word-pinyin">huílái</span><span class="word-clue">houé-laï</span><span class="word-meaning">come back / return</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">以后</span><span class="word-pinyin">yǐhòu</span><span class="word-clue">yi-hô</span><span class="word-meaning">after / afterward</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">三个字</span><span class="word-pinyin">sān ge zì</span><span class="word-clue">san gue dz</span><span class="word-meaning">three written characters</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">进来</span><span class="word-pinyin">jìnlái</span><span class="word-clue">djinn-laï</span><span class="word-meaning">come in</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">外面</span><span class="word-pinyin">wàimiàn</span><span class="word-clue">waï-mienne</span><span class="word-meaning">outside</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">里面</span><span class="word-pinyin">lǐmiàn</span><span class="word-clue">li-mienne</span><span class="word-meaning">inside</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">还没到</span><span class="word-pinyin">hái méi dào</span><span class="word-clue">haï méï dao</span><span class="word-meaning">has not arrived yet</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">已经来了</span><span class="word-pinyin">yǐjīng lái le</span><span class="word-clue">yi-djing laï le</span><span class="word-meaning">has already come / arrived</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">我觉得</span><span class="word-pinyin">wǒ juéde</span><span class="word-clue">wo djoué-de</span><span class="word-meaning">I think / I feel</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">很好看</span><span class="word-pinyin">hěn hǎokàn</span><span class="word-clue">heune hao-kane</span><span class="word-meaning">very good to read / enjoyable / nice-looking</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">看见</span><span class="word-pinyin">kànjiàn</span><span class="word-clue">kane-djiène</span><span class="word-meaning">see / catch sight of</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">后面</span><span class="word-pinyin">hòumiàn</span><span class="word-clue">hô-mienne</span><span class="word-meaning">behind / at the back</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">听见</span><span class="word-pinyin">tīngjiàn</span><span class="word-clue">ting-djiène</span><span class="word-meaning">hear</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">不知道</span><span class="word-pinyin">bù zhīdào</span><span class="word-clue">bou dje-dao</span><span class="word-meaning">do not know</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">什么时候</span><span class="word-pinyin">shénme shíhou</span><span class="word-clue">cheun-me che-hô</span><span class="word-meaning">when</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">出去</span><span class="word-pinyin">chūqù</span><span class="word-clue">tchou-tchu</span><span class="word-meaning">go out</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">走一走</span><span class="word-pinyin">zǒu yì zǒu</span><span class="word-clue">dzô yi dzô</span><span class="word-meaning">walk a little / take a short walk</span></div>
-  <div class="expression-card"><span class="word" lang="zh-Hans">虽然…还是…</span><span class="word-pinyin">suīrán… háishi…</span><span class="word-clue">soué-rane… haï-che…</span><span class="word-meaning">although… still…</span></div>
-</section>
 <div class="topline">
   <strong id="lessonLabel">Lesson 1 of 20</strong>
   <div class="meter" aria-label="Course progress"><span id="progressBar"></span></div>
@@ -1176,7 +1153,7 @@ document.querySelectorAll('.expression-card').forEach(card=>{
 });
 el('previous').onclick=()=>{if(index>0){index--;render()}};el('next').onclick=()=>{if(index<entries.length-1){index++;render()}};
 el('lessonSelect').onchange=e=>{index=Number(e.target.value)*10;render()};
-el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};
+el('practiceTab').onclick=()=>showSection('practice');el('gamesTab').onclick=()=>{showSection('games');showGameHome()};el('expressionsTab').onclick=()=>{window.location.href='expressions/'};
 el('newCharacter').addEventListener('input',autofillCharacterInfo);
 el('newCharacter').addEventListener('change',autofillCharacterInfo);
 el('addCharacter').onsubmit=async e=>{e.preventDefault();const ch=el('newCharacter').value.trim();let py=el('newPinyin').value.trim(),meaning=el('newMeaning').value.trim();if(!ch){el('addFeedback').textContent='Type one Chinese character first.';el('newCharacter').focus();return}if([...ch].length!==1){el('addFeedback').textContent='Enter only one Chinese character.';el('newCharacter').focus();return}const existingIndex=entries.findIndex(item=>item[0]===ch);if(existingIndex!==-1){index=existingIndex;render();el('addCharacter').reset();el('addFeedback').textContent=ch+' is already in your list — I opened it for you.';return}if(!py||!meaning){el('addFeedback').textContent='Looking up '+ch+'…';const info=await lookupCharacterInfo(ch);if(info){py=py||info.pinyin;meaning=meaning||info.meaning;el('newPinyin').value=py;el('newMeaning').value=meaning;}}if(!py){el('addFeedback').textContent='I could not find the pinyin automatically. Please type it for '+ch+'.';el('newPinyin').focus();return}if(!meaning){el('addFeedback').textContent='I could not find the English meaning automatically. Please type it for '+ch+'.';el('newMeaning').focus();return}const item=[ch,py,meaning];entries.push(item);customEntries.push(item);localStorage.setItem('hanzi-custom-entries',JSON.stringify(customEntries));updateLessons();index=entries.length-1;el('addCharacter').reset();el('addFeedback').textContent=ch+' added. Loading stroke order…';render();const found=await ensureStrokeData(ch);if(entries[index]?.[0]===ch&&found){makeWriter();renderGuide();quizMode=true;el('feedback').textContent='Stroke order loaded. Draw stroke 1 whenever you are ready. Watch is optional.';}el('addFeedback').textContent=found?ch+' added with drawing practice.':ch+' added to reviews, but no stroke-order data was found.';};
