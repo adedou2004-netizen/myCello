@@ -11,8 +11,15 @@ body{display:flex;flex-direction:column}
 nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:8px;background:#f2f4f7;border-bottom:1px solid #e4e7ec;position:sticky;top:0;z-index:10}
 button{min-height:48px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
 button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
+#memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
+#memoryBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
 iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 66px);background:#fff}
-@media(max-width:430px){button{font-size:13px;padding:7px 4px}nav{gap:5px;padding:6px}}
+dialog{border:0;border-radius:18px;padding:0;max-width:min(94vw,720px);width:720px;box-shadow:0 20px 60px #0005}
+dialog::backdrop{background:#0009}
+.memoryHead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #e5e7eb}
+.memoryHead strong{font-size:22px}.close{min-height:38px;padding:6px 10px}
+.memoryBody{padding:12px;text-align:center}.memoryBody img{display:block;max-width:100%;max-height:72vh;margin:auto;border-radius:12px}.memoryNote{margin-top:9px;color:#667085}
+@media(max-width:430px){button{font-size:13px;padding:7px 4px}nav{gap:5px;padding:6px}.memoryHead strong{font-size:18px}}
 </style>
 </head>
 <body>
@@ -21,45 +28,100 @@ iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 66px);background:#fff}
 <button id="games" role="tab" aria-selected="false">🎮 Games</button>
 <button id="expressions" role="tab" aria-selected="false">💬 Expressions</button>
 </nav>
+<div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
 <iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
+<dialog id="memoryDialog">
+ <div class="memoryHead"><strong id="memoryTitle">Memory Palace</strong><button id="memoryClose" class="close">✕</button></div>
+ <div class="memoryBody"><img id="memoryImage" alt="Memory palace card"><div id="memoryNote" class="memoryNote"></div></div>
+</dialog>
 <script>
+const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
+const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
+const STORAGE_BASE=SUPABASE_URL+"/storage/v1/object/public/memory-palace-cards/";
 const frame=document.getElementById("app");
 const buttons=[...document.querySelectorAll("nav button")];
-let mode="learn";
+const memoryBar=document.getElementById("memoryBar");
+const memoryBtn=document.getElementById("memoryBtn");
+const memoryDialog=document.getElementById("memoryDialog");
+let mode="learn", cards=new Map(), currentCard=null, lastSubject="";
 
+async function loadCards(){
+ try{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_type,subject_text,storage_path,title,note",{
+    headers:{apikey:SUPABASE_KEY}
+  });
+  if(!r.ok) throw new Error("Unable to load cards");
+  const rows=await r.json();
+  cards=new Map(rows.map(x=>[x.subject_type+"|"+x.subject_text,x]));
+  updateMemoryButton();
+ }catch(e){ console.warn(e); }
+}
 function select(which){
  mode=which;
  buttons.forEach(b=>b.setAttribute("aria-selected",String(b.id===which)));
  if(which==="expressions"){
-   if(!/\/expressions\/?(?:index\.html)?(?:[?#].*)?$/.test(frame.src)){
-     frame.src="../expressions/";
-   }
+   if(!/\/expressions\/?(?:index\.html)?(?:[?#].*)?$/.test(frame.src)) frame.src="../expressions/";
  } else {
    const isMain=!frame.src.includes("/expressions/");
-   if(!isMain){ frame.src="../index.html"; }
-   else{ activateMain(which); }
+   if(!isMain) frame.src="../index.html"; else activateMain(which);
  }
+ setTimeout(updateMemoryButton,80);
 }
 function cleanOldExpressionCards(doc){
- const ids=["old-expressions-heading","lesson-expressions-heading"];
- ids.forEach(id=>{
+ ["old-expressions-heading","lesson-expressions-heading"].forEach(id=>{
    const h=doc.getElementById(id);
-   if(h && h.parentElement) h.parentElement.style.display="none";
+   if(h&&h.parentElement) h.parentElement.style.display="none";
  });
 }
 function activateMain(which){
  try{
-  const doc=frame.contentDocument;
-  if(!doc)return;
+  const doc=frame.contentDocument;if(!doc)return;
   cleanOldExpressionCards(doc);
   const target=doc.getElementById(which==="games"?"gamesTab":"practiceTab");
-  if(target) target.click();
+  if(target)target.click();
  }catch(e){}
 }
-frame.addEventListener("load",()=>{
- if(mode!=="expressions") activateMain(mode);
-});
+function getCurrentSubject(){
+ try{
+  const doc=frame.contentDocument;if(!doc)return null;
+  if(mode==="expressions"){
+    const write=doc.getElementById("write");
+    const text=write&&!write.classList.contains("hidden")?doc.getElementById("wWord")?.textContent:doc.getElementById("rWord")?.textContent;
+    const value=(text||"").trim();
+    return value?{type:"expression",text:value}:null;
+  }
+  if(mode==="learn"){
+    const value=(doc.getElementById("bigchar")?.textContent||"").trim();
+    return value?{type:"character",text:value}:null;
+  }
+ }catch(e){}
+ return null;
+}
+function updateMemoryButton(){
+ const s=getCurrentSubject();
+ const key=s?s.type+"|"+s.text:"";
+ if(key===lastSubject&&currentCard===cards.get(key))return;
+ lastSubject=key;currentCard=cards.get(key)||null;
+ if(currentCard){
+   memoryBtn.textContent="🧠 Memory Palace for "+s.text;
+   memoryBar.style.display="block";
+ }else{
+   memoryBar.style.display="none";
+ }
+}
+memoryBtn.onclick=()=>{
+ if(!currentCard)return;
+ document.getElementById("memoryTitle").textContent=currentCard.title||("Memory Palace · "+currentCard.subject_text);
+ document.getElementById("memoryImage").src=STORAGE_BASE+currentCard.storage_path.split("/").map(encodeURIComponent).join("/");
+ document.getElementById("memoryNote").textContent=currentCard.note||"";
+ memoryDialog.showModal();
+};
+document.getElementById("memoryClose").onclick=()=>memoryDialog.close();
+memoryDialog.addEventListener("click",e=>{if(e.target===memoryDialog)memoryDialog.close()});
+frame.addEventListener("load",()=>{if(mode!=="expressions")activateMain(mode);setTimeout(updateMemoryButton,150)});
 buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
+setInterval(updateMemoryButton,600);
+loadCards();
 </script>
 </body>
 </html>
