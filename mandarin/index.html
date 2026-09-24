@@ -8,7 +8,7 @@
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#111827}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
 body{display:flex;flex-direction:column}
-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:8px;background:#f2f4f7;border-bottom:1px solid #e4e7ec;position:sticky;top:0;z-index:10}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:8px;background:#f2f4f7;border-bottom:1px solid #e4e7ec;position:sticky;top:0;z-index:10}
 button{min-height:48px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
 button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
 #memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
@@ -19,14 +19,15 @@ dialog::backdrop{background:#0009}
 .memoryHead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #e5e7eb}
 .memoryHead strong{font-size:22px}.close{min-height:38px;padding:6px 10px}
 .memoryBody{padding:12px;text-align:center}.memoryBody img{display:block;max-width:100%;max-height:72vh;margin:auto;border-radius:12px}.memoryNote{margin-top:9px;color:#667085}
-@media(max-width:430px){button{font-size:13px;padding:7px 4px}nav{gap:5px;padding:6px}.memoryHead strong{font-size:18px}}
+@media(max-width:520px){button{font-size:12px;padding:7px 3px}nav{gap:4px;padding:6px}.memoryHead strong{font-size:18px}}
 </style>
 </head>
 <body>
 <nav role="tablist" aria-label="Mandarin learning sections">
-<button id="learn" role="tab" aria-selected="true">✍ Learn &amp; write</button>
-<button id="games" role="tab" aria-selected="false">🎮 Games</button>
+<button id="learn" role="tab" aria-selected="true">✍ Characters</button>
+<button id="radicals" role="tab" aria-selected="false">部 Radicals</button>
 <button id="expressions" role="tab" aria-selected="false">💬 Expressions</button>
+<button id="games" role="tab" aria-selected="false">🎮 Games</button>
 </nav>
 <div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
 <iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
@@ -47,31 +48,31 @@ let mode="learn", cards=new Map(), currentCard=null, lastSubject="";
 
 async function loadCards(){
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_type,subject_text,storage_path,title,note",{
-    headers:{apikey:SUPABASE_KEY}
-  });
+  const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_type,subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
   if(!r.ok) throw new Error("Unable to load cards");
   const rows=await r.json();
   cards=new Map(rows.map(x=>[x.subject_type+"|"+x.subject_text,x]));
   updateMemoryButton();
- }catch(e){ console.warn(e); }
+ }catch(e){console.warn(e)}
+}
+function pageFor(which){
+ if(which==="expressions")return "../expressions/";
+ if(which==="radicals")return "../radicals-60/";
+ return "../index.html";
 }
 function select(which){
  mode=which;
  buttons.forEach(b=>b.setAttribute("aria-selected",String(b.id===which)));
- if(which==="expressions"){
-   if(!/\/expressions\/?(?:index\.html)?(?:[?#].*)?$/.test(frame.src)) frame.src="../expressions/";
- } else {
-   const isMain=!frame.src.includes("/expressions/");
-   if(!isMain) frame.src="../index.html"; else activateMain(which);
- }
- setTimeout(updateMemoryButton,80);
+ const wanted=pageFor(which);
+ const current=new URL(frame.src,location.href);
+ const target=new URL(wanted,location.href);
+ if(current.pathname!==target.pathname) frame.src=wanted;
+ else if(which==="learn"||which==="games") activateMain(which);
+ memoryBar.style.display="none";
+ setTimeout(updateMemoryButton,100);
 }
 function cleanOldExpressionCards(doc){
- ["old-expressions-heading","lesson-expressions-heading"].forEach(id=>{
-   const h=doc.getElementById(id);
-   if(h&&h.parentElement) h.parentElement.style.display="none";
- });
+ ["old-expressions-heading","lesson-expressions-heading"].forEach(id=>{const h=doc.getElementById(id);if(h&&h.parentElement)h.parentElement.style.display="none"});
 }
 function activateMain(which){
  try{
@@ -87,27 +88,22 @@ function getCurrentSubject(){
   if(mode==="expressions"){
     const write=doc.getElementById("write");
     const text=write&&!write.classList.contains("hidden")?doc.getElementById("wWord")?.textContent:doc.getElementById("rWord")?.textContent;
-    const value=(text||"").trim();
-    return value?{type:"expression",text:value}:null;
+    const value=(text||"").trim();return value?{type:"expression",text:value}:null;
+  }
+  if(mode==="radicals"){
+    const value=(doc.getElementById("glyph")?.textContent||"").trim();return value?{type:"radical",text:value}:null;
   }
   if(mode==="learn"){
-    const value=(doc.getElementById("bigchar")?.textContent||"").trim();
-    return value?{type:"character",text:value}:null;
+    const value=(doc.getElementById("bigchar")?.textContent||"").trim();return value?{type:"character",text:value}:null;
   }
  }catch(e){}
  return null;
 }
 function updateMemoryButton(){
- const s=getCurrentSubject();
- const key=s?s.type+"|"+s.text:"";
+ const s=getCurrentSubject(),key=s?s.type+"|"+s.text:"";
  if(key===lastSubject&&currentCard===cards.get(key))return;
  lastSubject=key;currentCard=cards.get(key)||null;
- if(currentCard){
-   memoryBtn.textContent="🧠 Memory Palace for "+s.text;
-   memoryBar.style.display="block";
- }else{
-   memoryBar.style.display="none";
- }
+ if(currentCard){memoryBtn.textContent="🧠 Memory Palace for "+s.text;memoryBar.style.display="block"}else memoryBar.style.display="none";
 }
 memoryBtn.onclick=()=>{
  if(!currentCard)return;
@@ -118,7 +114,7 @@ memoryBtn.onclick=()=>{
 };
 document.getElementById("memoryClose").onclick=()=>memoryDialog.close();
 memoryDialog.addEventListener("click",e=>{if(e.target===memoryDialog)memoryDialog.close()});
-frame.addEventListener("load",()=>{if(mode!=="expressions")activateMain(mode);setTimeout(updateMemoryButton,150)});
+frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games")activateMain(mode);setTimeout(updateMemoryButton,150)});
 buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
 setInterval(updateMemoryButton,600);
 loadCards();
