@@ -14,6 +14,19 @@ button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
 #memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
 #photoBar{padding:7px 10px;background:#eef6ff;border-bottom:1px solid #bfdbfe;text-align:center}
 #photoStatus{margin-left:8px;font-size:13px;color:#475467}
+#cameraPanel{display:none;position:fixed;inset:0;z-index:100;background:#000;color:#fff}
+#cameraPanel.open{display:flex;flex-direction:column}
+#cameraStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#000}
+#cameraVideo{width:100%;height:100%;object-fit:cover;display:block}
+#cameraShade{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.24)}
+#focusBox{position:absolute;left:50%;top:48%;width:min(68vw,390px);height:min(30vw,180px);transform:translate(-50%,-50%);border:4px solid #16e016;border-radius:5px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);touch-action:none}
+#focusBox:before{content:"";position:absolute;left:50%;top:50%;width:28px;height:4px;background:#16e016;transform:translate(-50%,-50%)}
+#focusBox:after{content:"";position:absolute;left:50%;top:50%;width:4px;height:28px;background:#16e016;transform:translate(-50%,-50%)}
+#cameraHint{text-align:center;padding:9px 12px;background:#111;font-size:14px}
+#cameraControls{display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:#111}
+#cameraControls button{min-width:110px}
+#cameraCapture{background:#fff;border:5px solid #aaa;border-radius:50%;min-width:66px;width:66px;height:66px;padding:0;font-size:0}
+#cameraCanvas{display:none}
 #photoPicker{display:none;padding:10px;background:#eef6ff;border-bottom:1px solid #bfdbfe}
 #photoPicker.open{display:block}
 #photoChoices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -39,6 +52,16 @@ dialog::backdrop{background:#0009}
 <button id="games" role="tab" aria-selected="false">🎮 Games</button>
 </nav>
 <div id="photoBar"><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden><span id="photoStatus"></span></div>
+<div id="cameraPanel" aria-hidden="true">
+ <div id="cameraStage">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <div id="cameraShade"></div>
+  <div id="focusBox" aria-label="Recognition area"></div>
+ </div>
+ <div id="cameraHint">Move the Chinese character or short phrase inside the green box. Tap inside the box to refocus.</div>
+ <div id="cameraControls"><button id="cameraCancel" type="button">Cancel</button><button id="cameraCapture" type="button" aria-label="Take picture">Take picture</button></div>
+ <canvas id="cameraCanvas"></canvas>
+</div>
 <div id="photoPicker">
  <strong>Tap exactly what you want to add</strong>
  <div id="photoChoices"></div>
@@ -62,6 +85,8 @@ const memoryBar=document.getElementById("memoryBar");
 const memoryBtn=document.getElementById("memoryBtn");
 const memoryDialog=document.getElementById("memoryDialog");
 const photoBtn=document.getElementById("photoBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
+const cameraPanel=document.getElementById("cameraPanel"),cameraStage=document.getElementById("cameraStage"),cameraVideo=document.getElementById("cameraVideo"),focusBox=document.getElementById("focusBox"),cameraCanvas=document.getElementById("cameraCanvas");
+let cameraStream=null;
 const photoPicker=document.getElementById("photoPicker"),photoChoices=document.getElementById("photoChoices"),photoManual=document.getElementById("photoManual");
 let mode="learn", cards=new Map(), currentCard=null, lastSubject="";
 
@@ -104,7 +129,56 @@ async function putPhotoText(text){
  if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it before saving."}
  else photoStatus.textContent="Selected: "+text+". Copy it into the expression form.";
 }
-photoBtn.onclick=()=>photoInput.click();
+async function openCamera(){
+ photoPicker.classList.remove("open");photoStatus.textContent="Opening camera…";
+ if(!navigator.mediaDevices?.getUserMedia){photoInput.click();return}
+ try{
+  cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  cameraVideo.srcObject=cameraStream;await cameraVideo.play();
+  const track=cameraStream.getVideoTracks()[0];
+  const caps=track.getCapabilities?track.getCapabilities():{};
+  const advanced={};
+  if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("continuous"))advanced.focusMode="continuous";
+  if(Object.keys(advanced).length)try{await track.applyConstraints({advanced:[advanced]})}catch(e){}
+  cameraPanel.classList.add("open");cameraPanel.setAttribute("aria-hidden","false");photoStatus.textContent="";
+ }catch(e){console.warn(e);photoStatus.textContent="Camera could not open. Choose a photo instead.";photoInput.click()}
+}
+function closeCamera(){
+ cameraPanel.classList.remove("open");cameraPanel.setAttribute("aria-hidden","true");
+ if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}
+ cameraVideo.srcObject=null;
+}
+async function refocusCamera(ev){
+ if(!cameraStream)return;
+ const track=cameraStream.getVideoTracks()[0],caps=track.getCapabilities?track.getCapabilities():{};
+ try{
+  if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("single-shot"))await track.applyConstraints({advanced:[{focusMode:"single-shot"}]});
+  else if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("continuous"))await track.applyConstraints({advanced:[{focusMode:"continuous"}]});
+ }catch(e){}
+}
+focusBox.addEventListener("click",refocusCamera);
+document.getElementById("cameraCancel").onclick=closeCamera;
+document.getElementById("cameraCapture").onclick=async()=>{
+ if(!cameraVideo.videoWidth)return;
+ const vr=cameraVideo.getBoundingClientRect(),br=focusBox.getBoundingClientRect();
+ const scale=Math.max(vr.width/cameraVideo.videoWidth,vr.height/cameraVideo.videoHeight);
+ const shownW=cameraVideo.videoWidth*scale,shownH=cameraVideo.videoHeight*scale;
+ const cropLeft=(shownW-vr.width)/2,cropTop=(shownH-vr.height)/2;
+ const sx=Math.max(0,(br.left-vr.left+cropLeft)/scale),sy=Math.max(0,(br.top-vr.top+cropTop)/scale);
+ const sw=Math.min(cameraVideo.videoWidth-sx,br.width/scale),sh=Math.min(cameraVideo.videoHeight-sy,br.height/scale);
+ const upscale=Math.min(3,Math.max(1,1200/sw));
+ cameraCanvas.width=Math.round(sw*upscale);cameraCanvas.height=Math.round(sh*upscale);
+ const ctx=cameraCanvas.getContext("2d");
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(cameraVideo,sx,sy,sw,sh,0,0,cameraCanvas.width,cameraCanvas.height);
+ closeCamera();photoStatus.textContent="Reading the green box…";
+ try{
+  const blob=await new Promise(r=>cameraCanvas.toBlob(r,"image/jpeg",.95));
+  const result=await Tesseract.recognize(blob,"chi_sim+eng");
+  showPhotoChoices((result.data.text||"").trim());
+ }catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Try again with the character filling the green box."}
+};
+photoBtn.onclick=openCamera;
 photoInput.onchange=async()=>{
  const file=photoInput.files&&photoInput.files[0];if(!file)return;
  photoStatus.textContent="Reading photo…";photoPicker.classList.remove("open");
