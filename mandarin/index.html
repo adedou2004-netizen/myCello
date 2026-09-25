@@ -12,7 +12,7 @@ nav{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:5px 4px cal
 button{min-height:44px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
 nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5px 2px}nav button[aria-selected="true"]{background:#eef6ff;color:#1473e6;border:0}
 #memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
-#photoBar{height:56px;padding:7px 12px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px}#photoBtn{width:46px;min-width:46px;height:42px;min-height:42px;padding:0;font-size:0;border:0;background:#f2f4f7}#photoBtn:after{content:"📷";font-size:23px}
+#photoBar{height:56px;padding:7px 12px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px}#photoBtn{width:46px;min-width:46px;height:42px;min-height:42px;padding:0;font-size:0;border:0;background:#f2f4f7}#photoBtn:after{content:"📷";font-size:23px}#manualAddBtn{height:42px;min-height:42px;padding:0 13px;border:0;background:#f2f4f7;font-weight:700}
 #photoStatus{font-size:13px;color:#475467;max-width:calc(100% - 58px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #cameraPanel{display:none;position:fixed;inset:0;z-index:100;background:#000;color:#fff}
 #cameraPanel.open{display:flex;flex-direction:column}
@@ -62,7 +62,7 @@ dialog::backdrop{background:#0009}
 <button id="expressions" role="tab" aria-selected="false">💬 Expressions</button>
 <button id="games" role="tab" aria-selected="false">🎮 Games</button>
 </nav>
-<div id="photoBar"><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden><span id="photoStatus"></span></div>
+<div id="photoBar"><span id="photoStatus"></span><button id="manualAddBtn" type="button">＋ Add</button><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden></div>
 <div id="cameraPanel" aria-hidden="true">
  <div id="cameraStage">
   <video id="cameraVideo" autoplay playsinline muted></video>
@@ -95,7 +95,7 @@ const buttons=[...document.querySelectorAll("nav button")];
 const memoryBar=document.getElementById("memoryBar");
 const memoryBtn=document.getElementById("memoryBtn");
 const memoryDialog=document.getElementById("memoryDialog");
-const photoBtn=document.getElementById("photoBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
+const photoBtn=document.getElementById("photoBtn"),manualAddBtn=document.getElementById("manualAddBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
 const cameraPanel=document.getElementById("cameraPanel"),cameraStage=document.getElementById("cameraStage"),cameraVideo=document.getElementById("cameraVideo"),focusBox=document.getElementById("focusBox"),cameraCanvas=document.getElementById("cameraCanvas");
 let cameraStream=null;
 const photoPicker=document.getElementById("photoPicker"),photoChoices=document.getElementById("photoChoices"),photoManual=document.getElementById("photoManual");
@@ -133,7 +133,14 @@ async function putPhotoText(text,kind){
   text=[...text][0]||"";
   if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
   const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
-  if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it, then add it.";return}
+  if(input){
+   input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));
+   const form=input.closest("form")||input.parentElement;
+   const candidates=form?[...form.querySelectorAll("button,input[type=submit]")]:[];
+   const saveBtn=candidates.find(b=>/add|save/i.test((b.textContent||b.value||"").trim()));
+   if(saveBtn){saveBtn.click();photoStatus.textContent="Added "+text+" as a Character.";return}
+   input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — tap the form save button.";return
+  }
  }
  if(kind!=="expression"&&[...text].length===1)return;
  if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
@@ -201,6 +208,16 @@ document.getElementById("cameraCapture").onclick=async()=>{
  }catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Try again with the character filling the green box."}
 };
 photoBtn.onclick=openCamera;
+manualAddBtn.onclick=async()=>{
+ photoPicker.classList.remove("open");
+ if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
+ const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
+ if(!input){photoStatus.textContent="The manual character form is not available yet.";return}
+ const form=input.closest("form")||input.parentElement;
+ if(form)form.style.display="block";
+ input.value="";input.placeholder="Type pinyin here";input.focus();input.scrollIntoView({behavior:"smooth",block:"center"});
+ photoStatus.textContent="No photo? Type the pinyin here.";
+};
 photoInput.onchange=async()=>{
  const file=photoInput.files&&photoInput.files[0];if(!file)return;
  photoStatus.textContent="Reading photo…";photoPicker.classList.remove("open");
@@ -254,10 +271,7 @@ function applyMobileMainUI(doc){
   }`;
   doc.head.appendChild(style);
   const add=doc.getElementById("newCharacter");
-  if(add){
-   const form=add.closest("form")||add.parentElement;
-   if(form){form.style.display="none";const toggle=doc.createElement("button");toggle.type="button";toggle.textContent="＋ Add character";toggle.style.cssText="margin:4px 0 10px;min-height:42px;border:1px solid #d0d5dd;border-radius:12px;background:#fff;padding:8px 12px;font-weight:700";toggle.onclick=()=>{form.style.display=form.style.display==="none"?"block":"none"};form.parentElement.insertBefore(toggle,form)}
-  }
+  if(add){const form=add.closest("form")||add.parentElement;if(form)form.style.display="none";}
  }catch(e){console.warn(e)}
 }
 function cleanOldExpressionCards(doc){
