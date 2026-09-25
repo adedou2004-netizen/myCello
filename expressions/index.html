@@ -101,6 +101,16 @@ let data=JSON.parse(localStorage.getItem(KEY)||"null");
 const seedData=seed.map((x,i)=>({id:"seed"+i,word:x[0],pinyin:x[1],clue:x[2],meaning:x[3],streak:0,stage:0,due:0,seen:0}));
 if(!Array.isArray(data)||!data.length){data=seedData;}else{const existingWords=new Set(data.map(x=>x.word));for(const item of seedData)if(!existingWords.has(item.word))data.push(item);}
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+window.addExpressionFromCamera=function(word){
+ word=(word||"").trim();
+ if(!word||!chineseChars(word).length)return {ok:false,message:"No Chinese characters found."};
+ const existing=data.find(x=>x.word===word);
+ if(existing)return {ok:true,existing:true,message:word+" is already in Expressions."};
+ data.unshift({id:"u"+Date.now(),word,pinyin:"",clue:"",meaning:"",streak:0,stage:0,due:0,seen:0});
+ save();
+ try{renderLibrary()}catch(e){}
+ return {ok:true,existing:false,message:"Added "+word+" to Expressions."};
+};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function chineseChars(s){return [...s].filter(c=>/[\u3400-\u9FFF]/.test(c))}
 function state(x){if(x.streak<3)return x.streak?"learning":"new";return "spaced"}
