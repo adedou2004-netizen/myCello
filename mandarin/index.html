@@ -7,13 +7,13 @@
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#111827}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
-body{display:flex;flex-direction:column}
-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:8px;background:#f2f4f7;border-bottom:1px solid #e4e7ec;position:sticky;top:0;z-index:10}
-button{min-height:48px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
-button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
+body{display:flex;flex-direction:column;padding-bottom:72px}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:5px 4px calc(5px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e5e7eb;position:fixed;left:0;right:0;bottom:0;z-index:50}
+button{min-height:44px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
+nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5px 2px}nav button[aria-selected="true"]{background:#eef6ff;color:#1473e6;border:0}
 #memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
-#photoBar{padding:7px 10px;background:#eef6ff;border-bottom:1px solid #bfdbfe;text-align:center}
-#photoStatus{margin-left:8px;font-size:13px;color:#475467}
+#photoBar{height:56px;padding:7px 12px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px}#photoBtn{width:46px;min-width:46px;height:42px;min-height:42px;padding:0;font-size:0;border:0;background:#f2f4f7}#photoBtn:after{content:"📷";font-size:23px}
+#photoStatus{font-size:13px;color:#475467;max-width:calc(100% - 58px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #cameraPanel{display:none;position:fixed;inset:0;z-index:100;background:#000;color:#fff}
 #cameraPanel.open{display:flex;flex-direction:column}
 #cameraStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#000}
@@ -35,13 +35,24 @@ button[aria-selected="true"]{background:#111827;color:#fff;border-color:#111827}
 #photoManual{width:100%;margin-top:10px;padding:10px;border:1px solid #98a2b3;border-radius:10px;font-size:20px}
 .photoActions{display:flex;gap:8px;margin-top:8px}.photoActions button{min-height:42px;padding:7px 12px}
 #memoryBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
-iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 66px);background:#fff}
+iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 128px);background:#fff}
 dialog{border:0;border-radius:18px;padding:0;max-width:min(94vw,720px);width:720px;box-shadow:0 20px 60px #0005}
 dialog::backdrop{background:#0009}
 .memoryHead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #e5e7eb}
 .memoryHead strong{font-size:22px}.close{min-height:38px;padding:6px 10px}
 .memoryBody{padding:12px;text-align:center}.memoryBody img{display:block;max-width:100%;max-height:72vh;margin:auto;border-radius:12px}.memoryNote{margin-top:9px;color:#667085}
-@media(max-width:520px){button{font-size:12px;padding:7px 3px}nav{gap:4px;padding:6px}.memoryHead strong{font-size:18px}}
+@media(max-width:520px){
+ body{padding-bottom:70px}
+ nav{gap:0;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}
+ nav button{font-size:11px;min-height:52px;white-space:normal}
+ #photoBar{height:52px;padding:5px 10px}
+ #memoryBar{position:fixed;right:64px;top:7px;z-index:40;padding:0;background:transparent;border:0}
+ #memoryBtn{font-size:0;width:44px;min-width:44px;height:40px;min-height:40px;padding:0;border:0;background:#f2f4f7}
+ #memoryBtn:before{content:"🧠";font-size:21px}
+ #photoPicker{position:fixed;left:8px;right:8px;top:62px;z-index:60;border-radius:16px;box-shadow:0 12px 35px #0003;max-height:72vh;overflow:auto}
+ iframe{min-height:calc(100vh - 122px)}
+ .memoryHead strong{font-size:18px}
+}
 </style>
 </head>
 <body>
@@ -214,6 +225,29 @@ function select(which){
  memoryBar.style.display="none";
  setTimeout(updateMemoryButton,100);
 }
+function applyMobileMainUI(doc){
+ try{
+  if(doc.getElementById("mandarinMobilePatch"))return;
+  const style=doc.createElement("style");style.id="mandarinMobilePatch";style.textContent=`
+  @media(max-width:700px){
+   body{margin:0!important;padding:10px 12px 30px!important;max-width:none!important;font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important}
+   #practiceTab,#gamesTab,#expressionsTab,.tabs,.tabbar,.top-tabs,[role="tablist"]{display:none!important}
+   form:has(#newCharacter),#newCharacterForm,.add-character,.character-form{display:none!important}
+   #bigchar{font-size:clamp(112px,34vw,170px)!important;line-height:1!important;margin:4px 0!important;display:block!important;overflow:visible!important}
+   #pinyin{font-size:34px!important;line-height:1.15!important}
+   #meaning{font-size:22px!important}
+   button,input,select{min-height:44px!important}
+   canvas{max-width:100%!important}
+   .container,.card,.panel,main,section{max-width:100%!important}
+  }`;
+  doc.head.appendChild(style);
+  const add=doc.getElementById("newCharacter");
+  if(add){
+   const form=add.closest("form")||add.parentElement;
+   if(form){form.style.display="none";const toggle=doc.createElement("button");toggle.type="button";toggle.textContent="＋ Add character";toggle.style.cssText="margin:4px 0 10px;min-height:42px;border:1px solid #d0d5dd;border-radius:12px;background:#fff;padding:8px 12px;font-weight:700";toggle.onclick=()=>{form.style.display=form.style.display==="none"?"block":"none"};form.parentElement.insertBefore(toggle,form)}
+  }
+ }catch(e){console.warn(e)}
+}
 function cleanOldExpressionCards(doc){
  ["old-expressions-heading","lesson-expressions-heading"].forEach(id=>{const h=doc.getElementById(id);if(h&&h.parentElement)h.parentElement.style.display="none"});
 }
@@ -257,7 +291,7 @@ memoryBtn.onclick=()=>{
 };
 document.getElementById("memoryClose").onclick=()=>memoryDialog.close();
 memoryDialog.addEventListener("click",e=>{if(e.target===memoryDialog)memoryDialog.close()});
-frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games")activateMain(mode);setTimeout(updateMemoryButton,150)});
+frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games"){activateMain(mode);applyMobileMainUI(frame.contentDocument)}setTimeout(updateMemoryButton,150)});
 buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
 setInterval(updateMemoryButton,600);
 loadCards();
