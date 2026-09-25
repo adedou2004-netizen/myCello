@@ -27,7 +27,7 @@ nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5p
 #cameraControls button{min-width:110px}
 #cameraCapture{background:#fff;border:5px solid #aaa;border-radius:50%;min-width:66px;width:66px;height:66px;padding:0;font-size:0}
 #cameraCanvas{display:none}
-#photoPicker{display:none;padding:10px;background:#eef6ff;border-bottom:1px solid #bfdbfe}
+#manualPanel{display:none;position:fixed;left:8px;right:8px;top:62px;z-index:65;padding:14px;background:#fff;border:1px solid #d0d5dd;border-radius:16px;box-shadow:0 12px 35px #0003}#manualPanel.open{display:block}#manualPinyin{width:100%;font-size:22px;padding:11px;border:1px solid #98a2b3;border-radius:10px;margin:9px 0}#manualPanel .manualActions{display:flex;gap:8px}#photoPicker{display:none;padding:10px;background:#eef6ff;border-bottom:1px solid #bfdbfe}
 #photoPicker.open{display:block}
 #photoChoices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .photoChoice{min-height:42px;font-size:22px;padding:7px 12px}
@@ -63,6 +63,7 @@ dialog::backdrop{background:#0009}
 <button id="games" role="tab" aria-selected="false">🎮 Games</button>
 </nav>
 <div id="photoBar"><span id="photoStatus"></span><button id="manualAddBtn" type="button">＋ Add</button><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden></div>
+<div id="manualPanel"><strong>Add from pinyin</strong><input id="manualPinyin" type="text" autocapitalize="none" autocomplete="off" placeholder="Type pinyin, for example: pingguo"><div class="manualActions"><button id="manualContinue" type="button">Add pinyin</button><button id="manualCancel" type="button">Cancel</button></div><div id="manualStatus" style="margin-top:8px;font-size:13px;color:#475467"></div></div>
 <div id="cameraPanel" aria-hidden="true">
  <div id="cameraStage">
   <video id="cameraVideo" autoplay playsinline muted></video>
@@ -96,6 +97,7 @@ const memoryBar=document.getElementById("memoryBar");
 const memoryBtn=document.getElementById("memoryBtn");
 const memoryDialog=document.getElementById("memoryDialog");
 const photoBtn=document.getElementById("photoBtn"),manualAddBtn=document.getElementById("manualAddBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
+const manualPanel=document.getElementById("manualPanel"),manualPinyin=document.getElementById("manualPinyin"),manualStatus=document.getElementById("manualStatus");
 const cameraPanel=document.getElementById("cameraPanel"),cameraStage=document.getElementById("cameraStage"),cameraVideo=document.getElementById("cameraVideo"),focusBox=document.getElementById("focusBox"),cameraCanvas=document.getElementById("cameraCanvas");
 let cameraStream=null;
 const photoPicker=document.getElementById("photoPicker"),photoChoices=document.getElementById("photoChoices"),photoManual=document.getElementById("photoManual");
@@ -208,15 +210,20 @@ document.getElementById("cameraCapture").onclick=async()=>{
  }catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Try again with the character filling the green box."}
 };
 photoBtn.onclick=openCamera;
-manualAddBtn.onclick=async()=>{
+manualAddBtn.onclick=()=>{
  photoPicker.classList.remove("open");
- if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
- const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
- if(!input){photoStatus.textContent="The manual character form is not available yet.";return}
- const form=input.closest("form")||input.parentElement;
- if(form)form.style.display="block";
- input.value="";input.placeholder="Type pinyin here";input.focus();input.scrollIntoView({behavior:"smooth",block:"center"});
- photoStatus.textContent="No photo? Type the pinyin here.";
+ manualPinyin.value="";manualStatus.textContent="";
+ manualPanel.classList.add("open");setTimeout(()=>manualPinyin.focus(),50);
+};
+document.getElementById("manualCancel").onclick=()=>manualPanel.classList.remove("open");
+document.getElementById("manualContinue").onclick=()=>{
+ const pinyin=manualPinyin.value.trim();
+ if(!pinyin){manualStatus.textContent="Type the pinyin first.";manualPinyin.focus();return}
+ // Keep the pinyin as the starting point. Character lookup/enrichment will be automated separately.
+ localStorage.setItem("mandarinPendingPinyin",pinyin);
+ manualStatus.textContent="Saved pinyin: "+pinyin;
+ photoStatus.textContent="Pinyin saved: "+pinyin;
+ manualPanel.classList.remove("open");
 };
 photoInput.onchange=async()=>{
  const file=photoInput.files&&photoInput.files[0];if(!file)return;
