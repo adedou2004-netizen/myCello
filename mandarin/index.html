@@ -137,10 +137,19 @@ async function putPhotoText(text,kind){
  }
  if(kind!=="expression"&&[...text].length===1)return;
  if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
- const doc=frame.contentDocument;
- const input=["newExpression","addWord","word","expression","newWord"].map(id=>doc&&doc.getElementById(id)).filter(Boolean)[0];
- if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it before saving."}
- else photoStatus.textContent="Selected: "+text+". Copy it into the expression form.";
+ const win=frame.contentWindow;
+ if(win&&typeof win.addExpressionFromCamera==="function"){
+  const result=win.addExpressionFromCamera(text);
+  photoStatus.textContent=result&&result.message?result.message:"Added "+text+" to Expressions.";
+  return;
+ }
+ const doc=frame.contentDocument,input=doc&&doc.getElementById("aWord");
+ if(input){
+  input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));
+  const addBtn=doc.getElementById("addBtn");
+  if(addBtn){addBtn.click();photoStatus.textContent="Added "+text+" to Expressions.";return}
+ }
+ photoStatus.textContent="Could not save "+text+". Please try again.";
 }
 async function openCamera(){
  photoPicker.classList.remove("open");photoStatus.textContent="Opening camera…";
