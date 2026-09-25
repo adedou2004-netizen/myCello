@@ -77,7 +77,7 @@ dialog::backdrop{background:#0009}
  <strong>Tap exactly what you want to add</strong>
  <div id="photoChoices"></div>
  <input id="photoManual" type="text" inputmode="text" placeholder="Or edit / paste the Chinese you want">
- <div class="photoActions"><button id="photoUse" type="button">Use selected text</button><button id="photoCancel" type="button">Cancel</button></div>
+ <div class="photoActions"><button id="photoCharacter" type="button">Add as Character</button><button id="photoExpression" type="button">Add as Expression</button><button id="photoCancel" type="button">Cancel</button></div>
 </div>
 <div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
 <iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
@@ -124,16 +124,18 @@ function showPhotoChoices(raw){
  });
  photoManual.value="";
  photoPicker.classList.add("open");
- photoStatus.textContent=items.length?"Choose one character, word, or expression below.":"I could not find Chinese text. You can type it below.";
+ photoStatus.textContent=items.length?"Select the text, then choose Character or Expression.":"I could not find Chinese text. You can type it below.";
 }
-async function putPhotoText(text){
+async function putPhotoText(text,kind){
  text=(text||"").trim();if(!text)return;
  photoPicker.classList.remove("open");
- if([...text].length===1){
+ if(kind==="character"){
+  text=[...text][0]||"";
   if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
   const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
   if(input){input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — check it, then add it.";return}
  }
+ if(kind!=="expression"&&[...text].length===1)return;
  if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
  const doc=frame.contentDocument;
  const input=["newExpression","addWord","word","expression","newWord"].map(id=>doc&&doc.getElementById(id)).filter(Boolean)[0];
@@ -197,7 +199,8 @@ photoInput.onchange=async()=>{
  catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Please try a clearer picture."}
  finally{photoInput.value=""}
 };
-document.getElementById("photoUse").onclick=()=>putPhotoText(photoManual.value);
+document.getElementById("photoCharacter").onclick=()=>putPhotoText(photoManual.value,"character");
+document.getElementById("photoExpression").onclick=()=>putPhotoText(photoManual.value,"expression");
 document.getElementById("photoCancel").onclick=()=>{photoPicker.classList.remove("open");photoStatus.textContent=""};
 
 async function loadCards(){
