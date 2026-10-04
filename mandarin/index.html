@@ -368,19 +368,13 @@ async function openPhrasesForCurrent(){
  box.textContent="Loading…";
  phrasesDialog.showModal();
  try{
-   const parentUrl=SUPABASE_URL+"/rest/v1/mandarin_entries?select=id&entry_type=eq.character&simplified=eq."+encodeURIComponent(s.text)+"&limit=1";
-   const pr=await fetch(parentUrl,{headers:{apikey:SUPABASE_KEY}});
-   if(!pr.ok)throw new Error("Could not find character");
-   const parents=await pr.json();
-   if(!parents.length){box.textContent="No phrases attached yet.";return}
-   const linkUrl=SUPABASE_URL+"/rest/v1/mandarin_entry_links?select=position,child:mandarin_entries!mandarin_entry_links_child_entry_id_fkey(simplified,pinyin,sound_clue,meaning_en)&parent_entry_id=eq."+parents[0].id+"&relationship=eq.example_of&order=position.asc";
-   const lr=await fetch(linkUrl,{headers:{apikey:SUPABASE_KEY}});
-   if(!lr.ok)throw new Error("Could not load phrases");
-   const rows=await lr.json();
+   const url=SUPABASE_URL+"/rest/v1/mandarin_character_examples?select=simplified,pinyin,sound_clue,meaning_en,position&character=eq."+encodeURIComponent(s.text)+"&order=position.asc";
+   const r=await fetch(url,{headers:{apikey:SUPABASE_KEY}});
+   if(!r.ok)throw new Error("Could not load phrases");
+   const rows=await r.json();
    if(!rows.length){box.textContent="No phrases attached yet.";return}
    box.innerHTML="";
-   rows.forEach(row=>{
-     const x=row.child||{};
+   rows.forEach(x=>{
      const item=document.createElement("div");
      item.style.padding="10px 0";
      item.style.borderBottom="1px solid #e5e7eb";
