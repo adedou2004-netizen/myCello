@@ -353,7 +353,8 @@ function updateMemoryButton(){
 memoryBtn.onclick=()=>{
  if(!currentCard)return;
  document.getElementById("memoryTitle").textContent=currentCard.title||("Memory Palace · "+currentCard.subject_text);
- document.getElementById("memoryImage").src=STORAGE_BASE+currentCard.storage_path.split("/").map(encodeURIComponent).join("/");
+ const p=currentCard.storage_path||"";
+ document.getElementById("memoryImage").src=/^(?:data:|https?:)/i.test(p)?p:STORAGE_BASE+p.split("/").map(encodeURIComponent).join("/");
  document.getElementById("memoryNote").textContent=currentCard.note||"";
  memoryDialog.showModal();
 };
