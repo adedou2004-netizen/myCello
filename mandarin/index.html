@@ -11,7 +11,7 @@ body{display:flex;flex-direction:column;padding-bottom:72px}
 nav{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:5px 4px calc(5px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e5e7eb;position:fixed;left:0;right:0;bottom:0;z-index:50}
 button{min-height:44px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
 nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5px 2px}nav button[aria-selected="true"]{background:#eef6ff;color:#1473e6;border:0}
-#memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+#memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
 #photoBar{height:56px;padding:7px 12px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px}#photoBtn{width:46px;min-width:46px;height:42px;min-height:42px;padding:0;font-size:0;border:0;background:#f2f4f7}#photoBtn:after{content:"📷";font-size:23px}#manualAddBtn{height:42px;min-height:42px;padding:0 13px;border:0;background:#f2f4f7;font-weight:700}
 #photoStatus{font-size:13px;color:#475467;max-width:calc(100% - 58px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #cameraPanel{display:none;position:fixed;inset:0;z-index:100;background:#000;color:#fff}
@@ -34,7 +34,7 @@ nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5p
 .photoChoice.phrase{font-size:18px}
 #photoManual{width:100%;margin-top:10px;padding:10px;border:1px solid #98a2b3;border-radius:10px;font-size:20px}
 .photoActions{display:flex;gap:8px;margin-top:8px}.photoActions button{min-height:42px;padding:7px 12px}
-#memoryBtn,#phrasesBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
+#memoryBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
 iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 128px);background:#fff}
 dialog{border:0;border-radius:18px;padding:0;max-width:min(94vw,720px);width:720px;box-shadow:0 20px 60px #0005}
 dialog::backdrop{background:#0009}
@@ -47,10 +47,8 @@ dialog::backdrop{background:#0009}
  nav button{font-size:11px;min-height:52px;white-space:normal}
  #photoBar{height:52px;padding:5px 10px}
  #memoryBar{position:fixed;right:64px;top:7px;z-index:40;padding:0;background:transparent;border:0}
- #memoryBtn,#phrasesBtn{width:auto;min-width:44px;height:40px;min-height:40px;padding:0 10px;border:0;background:#f2f4f7}
- #memoryBtn{font-size:0;width:44px;padding:0}
+ #memoryBtn{font-size:0;width:44px;min-width:44px;height:40px;min-height:40px;padding:0;border:0;background:#f2f4f7}
  #memoryBtn:before{content:"🧠";font-size:21px}
- #phrasesBtn{font-size:13px;font-weight:700}
  #photoPicker{position:fixed;left:8px;right:8px;top:62px;z-index:60;border-radius:16px;box-shadow:0 12px 35px #0003;max-height:72vh;overflow:auto}
  iframe{min-height:calc(100vh - 122px)}
  .memoryHead strong{font-size:18px}
@@ -82,7 +80,7 @@ dialog::backdrop{background:#0009}
  <input id="photoManual" type="text" inputmode="text" placeholder="Or edit / paste the Chinese you want">
  <div class="photoActions"><button id="photoCharacter" type="button">Add as Character</button><button id="photoExpression" type="button">Add as Expression</button><button id="photoCancel" type="button">Cancel</button></div>
 </div>
-<div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button><button id="phrasesBtn" type="button">💬 Phrases</button></div>
+<div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
 <iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
 <dialog id="memoryDialog">
  <div class="memoryHead"><strong id="memoryTitle">Memory Palace</strong><button id="memoryClose" class="close">✕</button></div>
@@ -101,7 +99,6 @@ const frame=document.getElementById("app");
 const buttons=[...document.querySelectorAll("nav button")];
 const memoryBar=document.getElementById("memoryBar");
 const memoryBtn=document.getElementById("memoryBtn");
-const phrasesBtn=document.getElementById("phrasesBtn");
 const memoryDialog=document.getElementById("memoryDialog");
 const phrasesDialog=document.getElementById("phrasesDialog");
 const photoBtn=document.getElementById("photoBtn"),manualAddBtn=document.getElementById("manualAddBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
@@ -287,6 +284,36 @@ function applyMobileMainUI(doc){
   doc.head.appendChild(style);
   const add=doc.getElementById("newCharacter");
   if(add){const form=add.closest("form")||add.parentElement;if(form)form.style.display="none";}
+  addCharacterPhrasesButton(doc);
+ }catch(e){console.warn(e)}
+}
+function addCharacterPhrasesButton(doc){
+ try{
+  if(!doc||doc.getElementById("characterPhrasesBtn"))return;
+  const candidates=[...doc.querySelectorAll("button,[role=button],.btn")];
+  const memoryControl=candidates.find(el=>/memory|palace/i.test((el.textContent||"").trim()));
+  let host=memoryControl&&memoryControl.parentElement;
+  if(!host){
+    const textNodes=[...doc.querySelectorAll("div,span,p")];
+    const placeholder=textNodes.find(el=>/no memory card yet/i.test((el.textContent||"").trim()));
+    host=placeholder&&placeholder.parentElement;
+  }
+  if(!host)return;
+  const b=doc.createElement("button");
+  b.id="characterPhrasesBtn";
+  b.type="button";
+  b.textContent="💬 Phrases";
+  b.style.minHeight="44px";
+  b.style.padding="8px 14px";
+  b.style.marginLeft="8px";
+  b.style.border="1px solid #d0d5dd";
+  b.style.borderRadius="13px";
+  b.style.background="#fff";
+  b.style.font="600 15px/1.1 system-ui";
+  b.style.color="#111827";
+  b.addEventListener("click",()=>openPhrasesForCurrent());
+  if(getComputedStyle(host).display!=="flex"){host.style.display="flex";host.style.alignItems="center";host.style.flexWrap="wrap";host.style.gap="8px"}
+  host.appendChild(b);
  }catch(e){console.warn(e)}
 }
 function cleanOldExpressionCards(doc){
@@ -321,20 +348,7 @@ function updateMemoryButton(){
  const s=getCurrentSubject(),key=s?s.type+"|"+s.text:"";
  if(key===lastSubject&&currentCard===cards.get(key))return;
  lastSubject=key;currentCard=cards.get(key)||null;
- if(s&&s.type==="character"){
-   memoryBar.style.display="flex";
-   phrasesBtn.style.display="";
-   phrasesBtn.textContent="💬 Phrases";
-   if(currentCard){
-     memoryBtn.style.display="";
-     memoryBtn.textContent="🧠 Memory Palace for "+s.text;
-   }else memoryBtn.style.display="none";
- }else if(currentCard){
-   memoryBar.style.display="flex";
-   phrasesBtn.style.display="none";
-   memoryBtn.style.display="";
-   memoryBtn.textContent="🧠 Memory Palace for "+s.text;
- }else memoryBar.style.display="none";
+ if(currentCard){memoryBtn.textContent="🧠 Memory Palace for "+s.text;memoryBar.style.display="block"}else memoryBar.style.display="none";
 }
 memoryBtn.onclick=()=>{
  if(!currentCard)return;
@@ -346,7 +360,7 @@ memoryBtn.onclick=()=>{
 document.getElementById("memoryClose").onclick=()=>memoryDialog.close();
 memoryDialog.addEventListener("click",e=>{if(e.target===memoryDialog)memoryDialog.close()});
 
-phrasesBtn.onclick=async()=>{
+async function openPhrasesForCurrent(){
  const s=getCurrentSubject();
  if(!s||s.type!=="character")return;
  document.getElementById("phrasesTitle").textContent="Phrases with "+s.text;
@@ -380,12 +394,12 @@ phrasesBtn.onclick=async()=>{
      box.appendChild(item);
    });
  }catch(e){console.warn(e);box.textContent="I could not load the linked phrases. Please try again."}
-};
+}
 document.getElementById("phrasesClose").onclick=()=>phrasesDialog.close();
 phrasesDialog.addEventListener("click",e=>{if(e.target===phrasesDialog)phrasesDialog.close()});
-frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games"){activateMain(mode);applyMobileMainUI(frame.contentDocument)}setTimeout(updateMemoryButton,150)});
+frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games"){activateMain(mode);applyMobileMainUI(frame.contentDocument);setTimeout(()=>addCharacterPhrasesButton(frame.contentDocument),250)}setTimeout(updateMemoryButton,150)});
 buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
-setInterval(updateMemoryButton,600);
+setInterval(()=>{updateMemoryButton();if(mode==="learn")addCharacterPhrasesButton(frame.contentDocument)},600);
 loadCards();
 </script>
 </body>
