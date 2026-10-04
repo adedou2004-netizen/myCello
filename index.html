@@ -824,6 +824,9 @@ svg {
 <style>
 #hanzi-course{color:var(--foreground);display:grid;gap:16px}
 #hanzi-course .topline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#hanzi-course .lesson-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:end}
+#hanzi-course .lesson-controls .form-label{width:100%;margin:0}
+#hanzi-course .lesson-nav-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
 #hanzi-course .meter{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;flex:1;min-width:140px}
 #hanzi-course .meter span{display:block;height:100%;background:var(--viz-series-1);transition:width .25s}
 #hanzi-course .layout{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(300px,1.2fr);gap:20px;align-items:start}
@@ -897,10 +900,12 @@ svg {
   <div class="meter" aria-label="Course progress"><span id="progressBar"></span></div>
   <span id="progressText" class="text-small text-muted">0 / 305 learned</span>
 </div>
-<div class="viz-controls">
+<div class="viz-controls lesson-controls">
   <label class="form-label">Lesson <select id="lessonSelect" class="form-select"></select></label>
-  <button id="previous" class="btn" type="button">← Previous</button>
-  <button id="next" class="btn" type="button">Next →</button>
+  <div class="lesson-nav-row">
+    <button id="previous" class="btn" type="button">← Previous</button>
+    <button id="next" class="btn" type="button">Next →</button>
+  </div>
 </div>
 <div class="layout">
   <section class="info">
