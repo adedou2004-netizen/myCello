@@ -112,7 +112,7 @@ function speak(text){const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">French sound · ${e.sound||french(e.pinyin)}</div><div class="mean">${e.meaning||"Add a meaning"}</div><div class="row center"><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">French sound · ${e.sound||french(e.pinyin)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind){
   const e=currentEntry(); if(!e) return;
@@ -245,6 +245,7 @@ function bindCard(){
   document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{
     const act=b.dataset.act;
     if(act==="hear") speak(e.simplified);
+    if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
     if(act==="examples"||act==="palace") showHint(act);
     if(act==="again"||act==="good"){grade(e.id,act==="good"); const due=dueIds(); study=due.find(id=>id!==e.id)||due[0]||null; renderToday()}
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
