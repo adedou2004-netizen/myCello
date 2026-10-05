@@ -43,6 +43,17 @@ dialog::backdrop{background:#0008}
 .listbtn{width:100%;text-align:left;margin-bottom:8px}
 .progress{height:8px;background:#eaecf0;border-radius:99px;overflow:hidden;margin-top:8px}
 .progress span{display:block;height:100%;background:var(--blue)}
+.finder{position:relative;border-radius:16px;overflow:hidden;background:#111;min-height:210px}
+.finder video,.finder img{width:100%;height:220px;object-fit:cover;display:block;background:#111}
+.box{position:absolute;left:50%;top:50%;width:68%;height:46%;transform:translate(-50%,-50%);border:4px solid #16e016;border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+.kicker{font-size:12px;letter-spacing:.04em;color:#98a2b3;font-weight:700;margin:12px 0 6px}
+.phrase{width:100%;font-size:28px;color:var(--blue);background:#eef6ff;border-color:#dbeafe}
+.note{display:flex;gap:8px;align-items:center}
+.camfull{position:fixed;inset:0;z-index:40;background:#000;color:#fff;display:flex;flex-direction:column}
+.camfull video{flex:1;width:100%;object-fit:cover}
+.camfull .box{height:28%}
+.cambar{display:flex;gap:10px;justify-content:center;align-items:center;padding:14px;background:#111}
+.shot{width:68px;height:68px;border-radius:50%;border:5px solid #ddd;background:#fff;min-height:68px}
 </style>
 </head>
 <body>
@@ -56,6 +67,7 @@ dialog::backdrop{background:#0008}
 <button data-tab="quiz">Quiz</button>
 </nav>
 <dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><img id="palaceImg" alt="Memory palace for this character"><p id="palaceNote"></p><label>One sentence</label><textarea id="palaceStory" placeholder="At my kitchen table, three people meet and one yells the sound."></textarea><label>Photo of the place</label><input id="palaceFile" type="file" accept="image/*" capture="environment"><button id="palaceSave" class="primary" type="button">Save to this character</button><p id="palaceStatus" class="muted"></p></div></dialog>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
 const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
@@ -137,24 +149,61 @@ function showLesson(){
   bindCard();
 }
 function renderCapture(){
-  $("#app").innerHTML=`<div class="card"><strong>Add without duplicating</strong><label>Chinese</label><input id="capText" placeholder="学 or 学习"><label>Pinyin</label><input id="capPy" placeholder="xué"><label>Traditional, if different</label><input id="capTrad"><label>English meaning</label><input id="capMean"><label>Example you met</label><input id="capEx" placeholder="我在学校学中文。"><label>Add to lesson</label><select id="capLesson">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><div class="row" style="margin-top:10px"><button class="primary" id="capSave">Save</button></div><p id="capStatus" class="muted"></p></div>`;
-  $("#capSave").onclick=saveCapture;
+  $("#app").innerHTML=`<div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button" style="margin-top:8px">Save expression</button><label>Note, optional</label><input id="capNote" placeholder="from podcast, minute 12"><label>Add to lesson</label><select id="capLesson">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><p id="capStatus" class="muted"></p></div>`;
+  $("#openCam").onclick=openCamera;
+  $("#photoFile").onchange=()=>readPhoto($("#photoFile").files[0]);
+  $("#saveChar").onclick=()=>savePicked("character");
+  $("#saveExpr").onclick=()=>savePicked("expression");
+  startPreview();
 }
-function saveCapture(){
-  const text=$("#capText").value.trim(); if(!text) return;
-  const chars=[...text];
+let camStream=null, picked="";
+async function startPreview(){
+  const video=$("#cam"); if(!video||!navigator.mediaDevices) return;
+  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false}); video.srcObject=camStream;}
+  catch(e){$("#camHint").textContent="Camera did not open. Take picture will ask for a photo instead.";}
+}
+function stopPreview(){ if(camStream){camStream.getTracks().forEach(t=>t.stop()); camStream=null;} }
+async function openCamera(){
+  if(!camStream){$("#photoFile").click(); return;}
+  const video=$("#cam"), canvas=document.createElement("canvas");
+  const vr=video.getBoundingClientRect();
+  canvas.width=video.videoWidth||1080; canvas.height=video.videoHeight||1440;
+  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
+  const blob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",.92));
+  readPhoto(blob);
+}
+async function readPhoto(file){
+  if(!file) return;
+  $("#camHint").textContent="Reading the green box…";
+  try{
+    const result=await Tesseract.recognize(file,"chi_sim+eng");
+    const runs=(result.data.text.match(/[\u3400-\u9fff]+/g)||[]);
+    const chars=[...new Set(runs.join("").split(""))].slice(0,12);
+    const phrase=runs.sort((a,b)=>b.length-a.length)[0]||"";
+    $("#charChips").innerHTML=chars.map(ch=>`<button class="chip" data-pick="${ch}">${ch}</button>`).join("")||"<span class='muted'>No characters found. Try closer.</span>";
+    $("#phraseChip").textContent=phrase||"No phrase found";
+    picked=chars[0]||phrase;
+    document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{picked=b.dataset.pick; document.querySelectorAll("[data-pick]").forEach(x=>x.classList.remove("on")); b.classList.add("on");});
+    $("#phraseChip").onclick=()=>{picked=phrase};
+    $("#camHint").textContent="Tap the character or phrase, then save.";
+  }catch(e){$("#camHint").textContent="Could not read that photo. Try again with the text filling the green box.";}
+}
+function savePicked(kind){
+  const text=(picked||$("#phraseChip").textContent||"").trim();
+  if(!text||text.startsWith("Tap")||text.startsWith("No ")){$("#capStatus").textContent="Choose a character or phrase first."; return;}
+  const value=kind==="character"?[...text][0]:text;
   const lesson=$("#capLesson").value;
-  let target=byText(text);
+  let target=byText(value);
   if(!target){
-    target={id:"u"+Date.now(),simplified:text,traditional:$("#capTrad").value.trim(),pinyin:$("#capPy").value.trim(),sound:"",meaning:$("#capMean").value.trim(),type:chars.length>1?"expression":"character",status:"new",source:"capture"};
+    target={id:"u"+Date.now(),simplified:value,traditional:"",pinyin:"",sound:"",meaning:"",type:kind==="expression"?"expression":"character",status:"new",source:"photo"};
     db.entries.unshift(target);
-  } else if($("#capTrad").value.trim()) target.traditional=$("#capTrad").value.trim();
+  }
   const l=db.lessons.find(x=>x.id===lesson);
   if(l&&!l.items.includes(target.id)) l.items.push(target.id);
-  chars.forEach(ch=>{ if(ch===text) return; let c=byText(ch); if(!c){c={id:"u"+Date.now()+ch,simplified:ch,traditional:"",pinyin:"",sound:"",meaning:"",type:"character",status:"new",source:"capture"}; db.entries.push(c)} });
-  const ex=$("#capEx").value.trim();
-  if(ex) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:ex,meaning:$("#capMean").value.trim(),source:l?l.title:""});
-  save(); $("#capStatus").textContent=byText(text)?"Saved once in the dictionary and linked to the lesson.":"Saved.";
+  const note=$("#capNote").value.trim();
+  if(note) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:value,meaning:"",source:note});
+  save();
+  $("#capStatus").textContent="Saved "+value+" once, and linked it to the lesson.";
 }
 function renderLibrary(){
   const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
@@ -222,6 +271,7 @@ function select(which){
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===which)));
   const titles={today:["Today","Due cards. Palace and examples stay on the character."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
   $("#title").textContent=titles[which][0]; $("#subtitle").textContent=titles[which][1];
+  if(which!=="capture") stopPreview();
   if(which==="today") renderToday();
   if(which==="lessons") renderLessons();
   if(which==="capture") renderCapture();
