@@ -10,3 +10,5 @@ Each app is something I have developed for my own daily use. The goal is simple:
 - Radicals 60 — planned app for learning the 60 most useful Chinese radicals and common vocabulary built with them.
 
 More private-use cell-phone apps can be added here over time.
+
+- Mandarin phone app — Today, Lessons, Capture, Library, Quiz. Dictionary once, lessons as lists, palace image in the memory-palace-cards bucket.

@@ -2,400 +2,234 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mandarin Learning</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mandarin</title>
 <style>
-:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#111827}
+:root{--blue:#1473e6;--ink:#1f2937;--muted:#667085;--line:#e5e7eb;--bg:#f6f7fb}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
-body{display:flex;flex-direction:column;padding-bottom:72px}
-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:5px 4px calc(5px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e5e7eb;position:fixed;left:0;right:0;bottom:0;z-index:50}
-button{min-height:44px;border:1px solid #d0d5dd;border-radius:13px;background:#fff;color:#111827;font:600 15px/1.1 system-ui;padding:8px;cursor:pointer}
-nav button{border:0;border-radius:10px;background:#fff;font-size:12px;padding:5px 2px}nav button[aria-selected="true"]{background:#eef6ff;color:#1473e6;border:0}
-#memoryBar{display:none;padding:7px 10px;background:#fff7ed;border-bottom:1px solid #fed7aa;text-align:center}
-#photoBar{height:56px;padding:7px 12px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px}#photoBtn{width:46px;min-width:46px;height:42px;min-height:42px;padding:0;font-size:0;border:0;background:#f2f4f7}#photoBtn:after{content:"📷";font-size:23px}#manualAddBtn{height:42px;min-height:42px;padding:0 13px;border:0;background:#f2f4f7;font-weight:700}
-#photoStatus{font-size:13px;color:#475467;max-width:calc(100% - 58px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#cameraPanel{display:none;position:fixed;inset:0;z-index:100;background:#000;color:#fff}
-#cameraPanel.open{display:flex;flex-direction:column}
-#cameraStage{position:relative;flex:1;min-height:0;overflow:hidden;background:#000}
-#cameraVideo{width:100%;height:100%;object-fit:cover;display:block}
-#cameraShade{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.24)}
-#focusBox{position:absolute;left:50%;top:48%;width:min(68vw,390px);height:min(30vw,180px);transform:translate(-50%,-50%);border:4px solid #16e016;border-radius:5px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);touch-action:none}
-#focusBox:before{content:"";position:absolute;left:50%;top:50%;width:28px;height:4px;background:#16e016;transform:translate(-50%,-50%)}
-#focusBox:after{content:"";position:absolute;left:50%;top:50%;width:4px;height:28px;background:#16e016;transform:translate(-50%,-50%)}
-#cameraHint{text-align:center;padding:9px 12px;background:#111;font-size:14px}
-#cameraControls{display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:#111}
-#cameraControls button{min-width:110px}
-#cameraCapture{background:#fff;border:5px solid #aaa;border-radius:50%;min-width:66px;width:66px;height:66px;padding:0;font-size:0}
-#cameraCanvas{display:none}
-#manualPanel{display:none;position:fixed;left:8px;right:8px;top:62px;z-index:65;padding:14px;background:#fff;border:1px solid #d0d5dd;border-radius:16px;box-shadow:0 12px 35px #0003}#manualPanel.open{display:block}#manualPinyin{width:100%;font-size:22px;padding:11px;border:1px solid #98a2b3;border-radius:10px;margin:9px 0}#manualPanel .manualActions{display:flex;gap:8px}#photoPicker{display:none;padding:10px;background:#eef6ff;border-bottom:1px solid #bfdbfe}
-#photoPicker.open{display:block}
-#photoChoices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.photoChoice{min-height:42px;font-size:22px;padding:7px 12px}
-.photoChoice.phrase{font-size:18px}
-#photoManual{width:100%;margin-top:10px;padding:10px;border:1px solid #98a2b3;border-radius:10px;font-size:20px}
-.photoActions{display:flex;gap:8px;margin-top:8px}.photoActions button{min-height:42px;padding:7px 12px}
-#memoryBtn{min-height:40px;background:#fff;border-color:#fdba74;font-size:14px}
-iframe{border:0;width:100%;flex:1;min-height:calc(100vh - 128px);background:#fff}
-dialog{border:0;border-radius:18px;padding:0;max-width:min(94vw,720px);width:720px;box-shadow:0 20px 60px #0005}
-dialog::backdrop{background:#0009}
-.memoryHead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #e5e7eb}
-.memoryHead strong{font-size:22px}.close{min-height:38px;padding:6px 10px}
-.memoryBody{padding:12px;text-align:center}.memoryBody img{display:block;max-width:100%;max-height:72vh;margin:auto;border-radius:12px}.memoryNote{margin-top:9px;color:#667085}
-@media(max-width:520px){
- body{padding-bottom:70px}
- nav{gap:0;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}
- nav button{font-size:11px;min-height:52px;white-space:normal}
- #photoBar{height:52px;padding:5px 10px}
- #memoryBar{position:fixed;right:64px;top:7px;z-index:40;padding:0;background:transparent;border:0}
- #memoryBtn{font-size:0;width:44px;min-width:44px;height:40px;min-height:40px;padding:0;border:0;background:#f2f4f7}
- #memoryBtn:before{content:"🧠";font-size:21px}
- #photoPicker{position:fixed;left:8px;right:8px;top:62px;z-index:60;border-radius:16px;box-shadow:0 12px 35px #0003;max-height:72vh;overflow:auto}
- iframe{min-height:calc(100vh - 122px)}
- .memoryHead strong{font-size:18px}
-}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px 10px}
+h1{margin:0;font-size:22px} .sub{color:var(--muted);font-size:13px;margin-top:2px}
+main{padding:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 12px}
+.glyph{font-size:clamp(84px,28vw,128px);line-height:1;text-align:center;font-family:"Songti SC","Noto Serif SC",serif}
+.trad{text-align:center;color:var(--muted);font-size:18px;margin-top:4px}
+.py{text-align:center;font-size:28px;font-weight:750;margin-top:6px}
+.fr{text-align:center;color:var(--blue);font-weight:700;margin-top:2px}
+.mean{text-align:center;font-size:18px;margin:6px 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row.center{justify-content:center}
+button,input,select,textarea{font:inherit}
+button{min-height:48px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+button.on{background:#eef6ff;color:var(--blue);border-color:#bfdbfe}
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:20}
+nav button{border:0;min-height:52px;font-size:11px;font-weight:700;color:#475467}
+nav button[aria-selected="true"]{color:var(--blue);background:#eef6ff}
+.hidden{display:none!important}
+.due{font-size:42px;font-weight:800;color:var(--blue);line-height:1}
+label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+input,select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:12px;background:#fff}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:42px;font-size:20px}
+.ex{border-top:1px solid var(--line);padding:8px 0}
+.ex b{font-size:20px}
+dialog{border:0;border-radius:18px;padding:0;width:min(94vw,560px);box-shadow:0 20px 60px #0005}
+dialog::backdrop{background:#0008}
+.dlghead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.dlgbody{padding:12px}
+.dlgbody img{width:100%;border-radius:12px;max-height:62vh;object-fit:contain;background:#fffaf0}
+.muted{color:var(--muted);font-size:13px}
+.listbtn{width:100%;text-align:left;margin-bottom:8px}
+.progress{height:8px;background:#eaecf0;border-radius:99px;overflow:hidden;margin-top:8px}
+.progress span{display:block;height:100%;background:var(--blue)}
 </style>
 </head>
 <body>
-<nav role="tablist" aria-label="Mandarin learning sections">
-<button id="learn" role="tab" aria-selected="true">✍ Characters</button>
-<button id="radicals" role="tab" aria-selected="false">部 Radicals</button>
-<button id="expressions" role="tab" aria-selected="false">💬 Expressions</button>
-<button id="games" role="tab" aria-selected="false">🎮 Games</button>
+<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Due cards, with the palace and examples on the character</div></header>
+<main id="app"></main>
+<nav>
+<button data-tab="today" aria-selected="true">Today</button>
+<button data-tab="lessons">Lessons</button>
+<button data-tab="capture">Capture</button>
+<button data-tab="library">Library</button>
+<button data-tab="quiz">Quiz</button>
 </nav>
-<div id="photoBar"><span id="photoStatus"></span><button id="manualAddBtn" type="button">＋ Add</button><button id="photoBtn" type="button">📷 Add from photo</button><input id="photoInput" type="file" accept="image/*" capture="environment" hidden></div>
-<div id="manualPanel"><strong>Add from pinyin</strong><input id="manualPinyin" type="text" autocapitalize="none" autocomplete="off" placeholder="Type pinyin, for example: pingguo"><div class="manualActions"><button id="manualContinue" type="button">Add pinyin</button><button id="manualCancel" type="button">Cancel</button></div><div id="manualStatus" style="margin-top:8px;font-size:13px;color:#475467"></div></div>
-<div id="cameraPanel" aria-hidden="true">
- <div id="cameraStage">
-  <video id="cameraVideo" autoplay playsinline muted></video>
-  <div id="cameraShade"></div>
-  <div id="focusBox" aria-label="Recognition area"></div>
- </div>
- <div id="cameraHint">Move the Chinese character or short phrase inside the green box. Tap inside the box to refocus.</div>
- <div id="cameraControls"><button id="cameraCancel" type="button">Cancel</button><button id="cameraCapture" type="button" aria-label="Take picture">Take picture</button></div>
- <canvas id="cameraCanvas"></canvas>
-</div>
-<div id="photoPicker">
- <strong>Tap exactly what you want to add</strong>
- <div id="photoChoices"></div>
- <input id="photoManual" type="text" inputmode="text" placeholder="Or edit / paste the Chinese you want">
- <div class="photoActions"><button id="photoCharacter" type="button">Add as Character</button><button id="photoExpression" type="button">Add as Expression</button><button id="photoCancel" type="button">Cancel</button></div>
-</div>
-<div id="memoryBar"><button id="memoryBtn">🧠 Memory Palace</button></div>
-<iframe id="app" title="Mandarin learning app" src="../index.html"></iframe>
-<dialog id="memoryDialog">
- <div class="memoryHead"><strong id="memoryTitle">Memory Palace</strong><button id="memoryClose" class="close">✕</button></div>
- <div class="memoryBody"><img id="memoryImage" alt="Memory palace card"><div id="memoryNote" class="memoryNote"></div></div>
-</dialog>
-<dialog id="phrasesDialog">
- <div class="memoryHead"><strong id="phrasesTitle">Phrases</strong><button id="phrasesClose" class="close">✕</button></div>
- <div class="memoryBody" style="text-align:left"><div id="phrasesContent" class="memoryNote" style="margin-top:0"></div></div>
-</dialog>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><img id="palaceImg" alt="Memory palace for this character"><p id="palaceNote"></p><label>One sentence</label><textarea id="palaceStory" placeholder="At my kitchen table, three people meet and one yells the sound."></textarea><label>Photo of the place</label><input id="palaceFile" type="file" accept="image/*" capture="environment"><button id="palaceSave" class="primary" type="button">Save to this character</button><p id="palaceStatus" class="muted"></p></div></dialog>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
 const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
-const STORAGE_BASE=SUPABASE_URL+"/storage/v1/object/public/memory-palace-cards/";
-const frame=document.getElementById("app");
-const buttons=[...document.querySelectorAll("nav button")];
-const memoryBar=document.getElementById("memoryBar");
-const memoryBtn=document.getElementById("memoryBtn");
-const memoryDialog=document.getElementById("memoryDialog");
-const phrasesDialog=document.getElementById("phrasesDialog");
-const photoBtn=document.getElementById("photoBtn"),manualAddBtn=document.getElementById("manualAddBtn"),photoInput=document.getElementById("photoInput"),photoStatus=document.getElementById("photoStatus");
-const manualPanel=document.getElementById("manualPanel"),manualPinyin=document.getElementById("manualPinyin"),manualStatus=document.getElementById("manualStatus");
-const cameraPanel=document.getElementById("cameraPanel"),cameraStage=document.getElementById("cameraStage"),cameraVideo=document.getElementById("cameraVideo"),focusBox=document.getElementById("focusBox"),cameraCanvas=document.getElementById("cameraCanvas");
-let cameraStream=null;
-const photoPicker=document.getElementById("photoPicker"),photoChoices=document.getElementById("photoChoices"),photoManual=document.getElementById("photoManual");
-let mode="learn", cards=new Map(), currentCard=null, lastSubject="";
-
-function chineseRuns(raw){
- return (raw.match(/[\u3400-\u9fff]+/g)||[]).filter(Boolean);
-}
-function photoCandidates(raw){
- const runs=chineseRuns(raw),seen=new Set(),out=[];
- const add=(text,type)=>{text=(text||"").trim();if(text&&!seen.has(text)){seen.add(text);out.push({text,type})}};
- runs.forEach(run=>{
-  [...run].forEach(ch=>add(ch,"character"));
-  if([...run].length>1)add(run,"phrase");
-  for(let n=2;n<=4;n++)for(let i=0;i+n<=[...run].length;i++)add([...run].slice(i,i+n).join(""),"phrase");
- });
- return out.slice(0,80);
-}
-function showPhotoChoices(raw){
- const items=photoCandidates(raw);
- photoChoices.innerHTML="";
- items.forEach(item=>{
-  const b=document.createElement("button");b.type="button";b.className="photoChoice "+item.type;b.textContent=item.text;
-  b.onclick=()=>{photoManual.value=item.text;[...photoChoices.children].forEach(x=>x.setAttribute("aria-selected","false"));b.setAttribute("aria-selected","true")};
-  photoChoices.appendChild(b);
- });
- photoManual.value="";
- photoPicker.classList.add("open");
- photoStatus.textContent=items.length?"Select the text, then choose Character or Expression.":"I could not find Chinese text. You can type it below.";
-}
-async function putPhotoText(text,kind){
- text=(text||"").trim();if(!text)return;
- photoPicker.classList.remove("open");
- if(kind==="character"){
-  text=[...text][0]||"";
-  if(mode!=="learn"){select("learn");await new Promise(r=>setTimeout(r,700))}
-  const doc=frame.contentDocument,input=doc&&doc.getElementById("newCharacter");
-  if(input){
-   input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));
-   const form=input.closest("form")||input.parentElement;
-   const candidates=form?[...form.querySelectorAll("button,input[type=submit]")]:[];
-   const saveBtn=candidates.find(b=>/add|save/i.test((b.textContent||b.value||"").trim()));
-   if(saveBtn){saveBtn.click();photoStatus.textContent="Added "+text+" as a Character.";return}
-   input.scrollIntoView({behavior:"smooth",block:"center"});photoStatus.textContent="Selected "+text+" — tap the form save button.";return
+const BUCKET=SUPABASE_URL+"/storage/v1/object/public/memory-palace-cards/";
+const SEED=[["一", "yī", "one"],["二", "èr", "two"],["三", "sān", "three"],["十", "shí", "ten"],["人", "rén", "person"],["大", "dà", "big"],["小", "xiǎo", "small"],["口", "kǒu", "mouth"],["日", "rì", "sun; day"],["月", "yuè", "moon; month"],["山", "shān", "mountain"],["水", "shuǐ", "water"],["火", "huǒ", "fire"],["木", "mù", "tree; wood"],["土", "tǔ", "earth; soil"],["田", "tián", "field"],["天", "tiān", "sky; day"],["上", "shàng", "up; above"],["下", "xià", "down; below"],["中", "zhōng", "middle"],["我", "wǒ", "I; me"],["你", "nǐ", "you"],["他", "tā", "he; him"],["她", "tā", "she; her"],["们", "men", "plural marker"],["好", "hǎo", "good"],["是", "shì", "to be"],["不", "bù", "not"],["有", "yǒu", "to have"],["在", "zài", "to be at"],["这", "zhè", "this"],["那", "nà", "that"],["哪", "nǎ", "which"],["谁", "shéi", "who"],["什", "shén", "what (part)"],["么", "me", "what (part)"],["的", "de", "possessive particle"],["了", "le", "completed-action particle"],["吗", "ma", "question particle"],["呢", "ne", "question particle"],["来", "lái", "come"],["去", "qù", "go"],["看", "kàn", "look; watch"],["见", "jiàn", "see; meet"],["听", "tīng", "listen"],["说", "shuō", "speak"],["读", "dú", "read"],["写", "xiě", "write"],["学", "xué", "study; learn"],["问", "wèn", "ask"],["吃", "chī", "eat"],["喝", "hē", "drink"],["做", "zuò", "do; make"],["走", "zǒu", "walk; leave"],["跑", "pǎo", "run"],["坐", "zuò", "sit"],["站", "zhàn", "stand"],["开", "kāi", "open; start"],["关", "guān", "close"],["回", "huí", "return"],["家", "jiā", "home; family"],["爸", "bà", "dad"],["妈", "mā", "mom"],["哥", "gē", "older brother"],["姐", "jiě", "older sister"],["弟", "dì", "younger brother"],["妹", "mèi", "younger sister"],["儿", "ér", "son; child"],["女", "nǚ", "woman; daughter"],["子", "zǐ", "child"],["朋", "péng", "friend (part)"],["友", "yǒu", "friend"],["老", "lǎo", "old"],["师", "shī", "teacher"],["生", "shēng", "life; student"],["同", "tóng", "same; together"],["名", "míng", "name"],["字", "zì", "character; word"],["国", "guó", "country"],["汉", "hàn", "Han; Chinese"],["年", "nián", "year"],["今", "jīn", "today; present"],["明", "míng", "bright; next"],["昨", "zuó", "yesterday"],["时", "shí", "time; hour"],["分", "fēn", "minute; divide"],["点", "diǎn", "o’clock; point"],["早", "zǎo", "early; morning"],["晚", "wǎn", "late; evening"],["午", "wǔ", "noon"],["春", "chūn", "spring"],["夏", "xià", "summer"],["秋", "qiū", "autumn"],["冬", "dōng", "winter"],["星", "xīng", "star"],["期", "qī", "period; week"],["前", "qián", "front; before"],["后", "hòu", "back; after"],["现", "xiàn", "present; appear"],["每", "měi", "every"],["零", "líng", "zero"],["四", "sì", "four"],["五", "wǔ", "five"],["六", "liù", "six"],["七", "qī", "seven"],["八", "bā", "eight"],["九", "jiǔ", "nine"],["百", "bǎi", "hundred"],["千", "qiān", "thousand"],["万", "wàn", "ten thousand"],["多", "duō", "many; much"],["少", "shǎo", "few; little"],["几", "jǐ", "how many"],["个", "gè", "general measure word"],["本", "běn", "measure word for books"],["只", "zhī", "measure word for animals"],["杯", "bēi", "cup"],["块", "kuài", "piece; yuan"],["钱", "qián", "money"],["元", "yuán", "yuan"],["白", "bái", "white"],["黑", "hēi", "black"],["红", "hóng", "red"],["蓝", "lán", "blue"],["绿", "lǜ", "green"],["黄", "huáng", "yellow"],["色", "sè", "color"],["长", "cháng", "long"],["短", "duǎn", "short"],["高", "gāo", "tall; high"],["新", "xīn", "new"],["旧", "jiù", "old; used"],["热", "rè", "hot"],["冷", "lěng", "cold"],["快", "kuài", "fast"],["慢", "màn", "slow"],["忙", "máng", "busy"],["累", "lèi", "tired"],["难", "nán", "difficult"],["易", "yì", "easy"],["爱", "ài", "love"],["喜", "xǐ", "like; joy"],["欢", "huān", "joyous"],["想", "xiǎng", "think; want"],["知", "zhī", "know"],["道", "dào", "way; know"],["觉", "jué", "feel; perceive"],["得", "de", "complement particle"],["笑", "xiào", "smile; laugh"],["哭", "kū", "cry"],["头", "tóu", "head"],["脸", "liǎn", "face"],["眼", "yǎn", "eye"],["耳", "ěr", "ear"],["手", "shǒu", "hand"],["脚", "jiǎo", "foot"],["心", "xīn", "heart"],["身", "shēn", "body"],["病", "bìng", "illness"],["医", "yī", "medicine; doctor"],["饭", "fàn", "cooked rice; meal"],["菜", "cài", "dish; vegetable"],["茶", "chá", "tea"],["果", "guǒ", "fruit"],["米", "mǐ", "rice"],["面", "miàn", "noodles; face"],["肉", "ròu", "meat"],["鱼", "yú", "fish"],["鸡", "jī", "chicken"],["蛋", "dàn", "egg"],["书", "shū", "book"],["笔", "bǐ", "pen"],["纸", "zhǐ", "paper"],["桌", "zhuō", "table"],["椅", "yǐ", "chair"],["门", "mén", "door"],["窗", "chuāng", "window"],["房", "fáng", "room; house"],["车", "chē", "vehicle"],["路", "lù", "road"],["电", "diàn", "electricity"],["话", "huà", "speech; phone"],["脑", "nǎo", "brain"],["影", "yǐng", "shadow; film"],["网", "wǎng", "net; internet"],["机", "jī", "machine"],["校", "xiào", "school"],["店", "diàn", "shop"],["院", "yuàn", "courtyard; institute"],["馆", "guǎn", "building; hall"],["东", "dōng", "east"],["西", "xī", "west"],["南", "nán", "south"],["北", "běi", "north"],["里", "lǐ", "inside"],["外", "wài", "outside"],["左", "zuǒ", "left"],["右", "yòu", "right"],["边", "biān", "side"],["近", "jìn", "near"],["腿", "tuǐ", "leg"],["肚", "dù", "belly"],["胖", "pàng", "plump; fat"],["肝", "gān", "liver"],["很", "hěn", "very"],["太", "tài", "too; very"],["都", "dōu", "all; both"],["也", "yě", "also"],["还", "hái", "still; also"],["再", "zài", "again"],["最", "zuì", "most"],["更", "gèng", "more; even more"],["真", "zhēn", "really; true"],["别", "bié", "do not; other"],["会", "huì", "can; know how to"],["能", "néng", "can; be able to"],["要", "yào", "want; need"],["给", "gěi", "give; for"],["跟", "gēn", "with; follow"],["从", "cóng", "from; follow"],["到", "dào", "arrive; to"],["对", "duì", "correct; toward"],["为", "wèi", "for; because of"],["因", "yīn", "cause; because"],["所", "suǒ", "place; that which"],["以", "yǐ", "by; with; in order to"],["已", "yǐ", "already"],["经", "jīng", "pass through; already (part)"],["过", "guò", "pass; experiential particle"],["着", "zhe", "ongoing-state particle"],["把", "bǎ", "disposal particle; hold"],["被", "bèi", "passive marker"],["让", "ràng", "let; allow"],["叫", "jiào", "call; be called"],["怎", "zěn", "how"],["样", "yàng", "kind; manner"],["和", "hé", "and; with"],["或", "huò", "or"],["但", "dàn", "but"],["可", "kě", "can; may"],["应", "yīng", "should; ought to"],["该", "gāi", "should"],["请", "qǐng", "please; invite"],["谢", "xiè", "thank"],["没", "méi", "not have; not"],["常", "cháng", "often; common"],["次", "cì", "time; occurrence"],["第", "dì", "ordinal prefix"],["两", "liǎng", "two (before measure words)"],["半", "bàn", "half"],["号", "hào", "number; date"],["周", "zhōu", "week"],["刚", "gāng", "just now"],["才", "cái", "only then; just"],["先", "xiān", "first; earlier"],["正", "zhèng", "just; currently; correct"],["起", "qǐ", "rise; start"],["床", "chuáng", "bed"],["睡", "shuì", "sleep"],["醒", "xǐng", "wake up"],["洗", "xǐ", "wash"],["穿", "chuān", "wear; pass through"],["衣", "yī", "clothes"],["服", "fú", "clothing; serve"],["鞋", "xié", "shoe"],["买", "mǎi", "buy"],["卖", "mài", "sell"],["找", "zhǎo", "look for; find"],["换", "huàn", "change; exchange"],["用", "yòng", "use"],["拿", "ná", "take; hold"],["放", "fàng", "put; release"],["带", "dài", "bring; carry"],["送", "sòng", "give; deliver"],["等", "děng", "wait; etc."],["帮", "bāng", "help"],["进", "jìn", "enter"],["出", "chū", "exit; go out"],["入", "rù", "enter"],["离", "lí", "leave; away from"],["住", "zhù", "live; reside"],["工", "gōng", "work; labor"],["作", "zuò", "work; make"],["事", "shì", "matter; thing"],["班", "bān", "class; work shift"],["司", "sī", "manage; company (part)"],["休", "xiū", "rest"],["息", "xī", "rest; breath"],["游", "yóu", "travel; swim"],["玩", "wán", "play"],["旅", "lǚ", "travel"],["票", "piào", "ticket"],["飞", "fēi", "fly"],["场", "chǎng", "place; field"],["雨", "yǔ", "rain"],["雪", "xuě", "snow"],["风", "fēng", "wind"],["云", "yún", "cloud"],["鹅", "é", "goose"],["饿", "è", "hungry"],["页", "yè", "page"],["叶", "yè", "leaf"],["树", "shù", "tree"],["羊", "yáng", "sheep; goat"],["筷", "kuài", "chopstick (in 筷子)"],["抢", "qiǎng", "grab; snatch; seize"],["段", "duàn", "section; segment; piece"]];
+const KEY="mandarinAppV2";
+const $=s=>document.querySelector(s);
+let tab="today", study=null, lessonQueue=[], lessonAt=0, quiz=null;
+let db=load();
+function load(){
+  const saved=JSON.parse(localStorage.getItem(KEY)||"null");
+  if(saved&&saved.entries) return saved;
+  const entries=SEED.map((x,i)=>({id:"s"+i,simplified:x[0],traditional:"",pinyin:x[1],sound:"",meaning:x[2],type:"character",status:"new",source:"course"}));
+  const lessons=[];
+  for(let n=0;n<entries.length;n+=10){
+    const a=n+1,b=Math.min(entries.length,n+10);
+    lessons.push({id:"L"+(n/10+1),title:"Lesson "+(n/10+1)+" · characters "+a+"–"+b,kind:"course",source:"Mandarin 200",items:entries.slice(n,n+10).map(e=>e.id)});
   }
- }
- if(kind!=="expression"&&[...text].length===1)return;
- if(mode!=="expressions"){select("expressions");await new Promise(r=>setTimeout(r,700))}
- const win=frame.contentWindow;
- if(win&&typeof win.addExpressionFromCamera==="function"){
-  const result=win.addExpressionFromCamera(text);
-  photoStatus.textContent=result&&result.message?result.message:"Added "+text+" to Expressions.";
-  return;
- }
- const doc=frame.contentDocument,input=doc&&doc.getElementById("aWord");
- if(input){
-  input.value=text;input.dispatchEvent(new Event("input",{bubbles:true}));
-  const addBtn=doc.getElementById("addBtn");
-  if(addBtn){addBtn.click();photoStatus.textContent="Added "+text+" to Expressions.";return}
- }
- photoStatus.textContent="Could not save "+text+". Please try again.";
+  return {entries,lessons,examples:[],reviews:{},palace:{}};
 }
-async function openCamera(){
- photoPicker.classList.remove("open");photoStatus.textContent="Opening camera…";
- if(!navigator.mediaDevices?.getUserMedia){photoInput.click();return}
- try{
-  cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
-  cameraVideo.srcObject=cameraStream;await cameraVideo.play();
-  const track=cameraStream.getVideoTracks()[0];
-  const caps=track.getCapabilities?track.getCapabilities():{};
-  const advanced={};
-  if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("continuous"))advanced.focusMode="continuous";
-  if(Object.keys(advanced).length)try{await track.applyConstraints({advanced:[advanced]})}catch(e){}
-  cameraPanel.classList.add("open");cameraPanel.setAttribute("aria-hidden","false");photoStatus.textContent="";
- }catch(e){console.warn(e);photoStatus.textContent="Camera could not open. Choose a photo instead.";photoInput.click()}
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function french(py){
+  const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
+  let s=[...String(py||"").toLowerCase()].map(c=>m[c]||c).join("").replace(/[^a-zü ]/g,"");
+  const exact={yi:"i",wu:"ou",yu:"u",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é"};
+  return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
 }
-function closeCamera(){
- cameraPanel.classList.remove("open");cameraPanel.setAttribute("aria-hidden","true");
- if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}
- cameraVideo.srcObject=null;
+function entry(id){return db.entries.find(e=>e.id===id)}
+function byText(text){return db.entries.find(e=>e.simplified===text||e.traditional===text)}
+function dueIds(){const now=Date.now();return db.entries.filter(e=>{const r=db.reviews[e.id];return !r||!r.next||r.next<=now}).map(e=>e.id)}
+function grade(id,good){
+  const r=db.reviews[id]||{strength:2.5,interval:0,streak:0};
+  r.streak=good?r.streak+1:0;
+  if(!good){r.interval=1;r.strength=Math.max(1.3,r.strength-.2);r.next=Date.now()+86400000}
+  else if(r.streak<3){r.interval=0;r.next=Date.now()+600000}
+  else {r.interval=Math.max(1,Math.round((r.interval||1)*r.strength));r.next=Date.now()+r.interval*86400000}
+  db.reviews[id]=r; const e=entry(id); if(e) e.status=r.streak>=3?"review":"learning"; save();
 }
-async function refocusCamera(ev){
- if(!cameraStream)return;
- const track=cameraStream.getVideoTracks()[0],caps=track.getCapabilities?track.getCapabilities():{};
- try{
-  if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("single-shot"))await track.applyConstraints({advanced:[{focusMode:"single-shot"}]});
-  else if(Array.isArray(caps.focusMode)&&caps.focusMode.includes("continuous"))await track.applyConstraints({advanced:[{focusMode:"continuous"}]});
- }catch(e){}
+function examplesFor(id){return db.examples.filter(x=>x.entryId===id)}
+function palaceFor(e){return db.palace[e.id]||null}
+function speak(text){const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u.rate=.75;speechSynthesis.cancel();speechSynthesis.speak(u)}
+function card(e, actions){
+  const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
+  const ex=examplesFor(e.id);
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">French sound · ${e.sound||french(e.pinyin)}</div><div class="mean">${e.meaning||"Add a meaning"}</div><div class="row center"><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
 }
-focusBox.addEventListener("click",refocusCamera);
-document.getElementById("cameraCancel").onclick=closeCamera;
-document.getElementById("cameraCapture").onclick=async()=>{
- if(!cameraVideo.videoWidth)return;
- const vr=cameraVideo.getBoundingClientRect(),br=focusBox.getBoundingClientRect();
- const scale=Math.max(vr.width/cameraVideo.videoWidth,vr.height/cameraVideo.videoHeight);
- const shownW=cameraVideo.videoWidth*scale,shownH=cameraVideo.videoHeight*scale;
- const cropLeft=(shownW-vr.width)/2,cropTop=(shownH-vr.height)/2;
- const sx=Math.max(0,(br.left-vr.left+cropLeft)/scale),sy=Math.max(0,(br.top-vr.top+cropTop)/scale);
- const sw=Math.min(cameraVideo.videoWidth-sx,br.width/scale),sh=Math.min(cameraVideo.videoHeight-sy,br.height/scale);
- const upscale=Math.min(3,Math.max(1,1200/sw));
- cameraCanvas.width=Math.round(sw*upscale);cameraCanvas.height=Math.round(sh*upscale);
- const ctx=cameraCanvas.getContext("2d");
- ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
- ctx.drawImage(cameraVideo,sx,sy,sw,sh,0,0,cameraCanvas.width,cameraCanvas.height);
- closeCamera();photoStatus.textContent="Reading the green box…";
- try{
-  const blob=await new Promise(r=>cameraCanvas.toBlob(r,"image/jpeg",.95));
-  const result=await Tesseract.recognize(blob,"chi_sim+eng");
-  showPhotoChoices((result.data.text||"").trim());
- }catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Try again with the character filling the green box."}
-};
-photoBtn.onclick=openCamera;
-manualAddBtn.onclick=()=>{
- photoPicker.classList.remove("open");
- manualPinyin.value="";manualStatus.textContent="";
- manualPanel.classList.add("open");setTimeout(()=>manualPinyin.focus(),50);
-};
-document.getElementById("manualCancel").onclick=()=>manualPanel.classList.remove("open");
-document.getElementById("manualContinue").onclick=()=>{
- const pinyin=manualPinyin.value.trim();
- if(!pinyin){manualStatus.textContent="Type the pinyin first.";manualPinyin.focus();return}
- // Keep the pinyin as the starting point. Character lookup/enrichment will be automated separately.
- localStorage.setItem("mandarinPendingPinyin",pinyin);
- manualStatus.textContent="Saved pinyin: "+pinyin;
- photoStatus.textContent="Pinyin saved: "+pinyin;
- manualPanel.classList.remove("open");
-};
-photoInput.onchange=async()=>{
- const file=photoInput.files&&photoInput.files[0];if(!file)return;
- photoStatus.textContent="Reading photo…";photoPicker.classList.remove("open");
- try{const result=await Tesseract.recognize(file,"chi_sim+eng");showPhotoChoices((result.data.text||"").trim())}
- catch(e){console.warn(e);photoStatus.textContent="Photo reading failed. Please try a clearer picture."}
- finally{photoInput.value=""}
-};
-document.getElementById("photoCharacter").onclick=()=>putPhotoText(photoManual.value,"character");
-document.getElementById("photoExpression").onclick=()=>putPhotoText(photoManual.value,"expression");
-document.getElementById("photoCancel").onclick=()=>{photoPicker.classList.remove("open");photoStatus.textContent=""};
-
-async function loadCards(){
- try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_type,subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
-  if(!r.ok) throw new Error("Unable to load cards");
-  const rows=await r.json();
-  cards=new Map(rows.map(x=>[x.subject_type+"|"+x.subject_text,x]));
-  updateMemoryButton();
- }catch(e){console.warn(e)}
+function showHint(kind){
+  const e=currentEntry(); if(!e) return;
+  const box=$("#hint");
+  if(kind==="examples"){
+    const ex=examplesFor(e.id);
+    box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b><div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
+  }
+  if(kind==="palace") openPalace(e);
 }
-function pageFor(which){
- if(which==="expressions")return "../expressions/";
- if(which==="radicals")return "../radicals-60/";
- return "../index.html";
+function currentEntry(){return study?entry(study):null}
+function renderToday(){
+  const due=dueIds();
+  if(!study||!due.includes(study)) study=due[0]||null;
+  const e=study?entry(study):null;
+  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><div class="muted">Practice what is due. The palace belongs to the character on the card.</div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  bindCard();
+}
+function renderLessons(){
+  $("#app").innerHTML=`<div class="card"><button class="primary" id="newLesson" type="button">New lesson from a book or class</button><p class="muted">A lesson is a list. The character stays once in the dictionary.</p></div>`+db.lessons.map(l=>`<button class="listbtn card" data-lesson="${l.id}"><strong>${l.title}</strong><div class="muted">${l.kind} · ${l.items.length} items</div><div class="progress"><span style="width:${Math.round(100*l.items.filter(id=>db.reviews[id]&&db.reviews[id].streak>=3).length/Math.max(1,l.items.length))}%"></span></div></button>`).join("");
+  $("#newLesson").onclick=()=>{const title=prompt("Lesson name, for example The Little Prince, chapter 2"); if(!title) return; db.lessons.unshift({id:"u"+Date.now(),title,kind:"book",source:title,items:[]}); save(); renderLessons()};
+  document.querySelectorAll("[data-lesson]").forEach(b=>b.onclick=()=>openLesson(b.dataset.lesson));
+}
+function openLesson(id){
+  const l=db.lessons.find(x=>x.id===id); if(!l) return;
+  lessonQueue=l.items.slice(); lessonAt=0; tab="lesson";
+  $("#title").textContent=l.title; $("#subtitle").textContent="Practice this lesson. Due date is ignored.";
+  showLesson();
+}
+function showLesson(){
+  const id=lessonQueue[lessonAt]; const e=id?entry(id):null;
+  if(!e){$("#app").innerHTML=`<div class="card">Lesson finished.</div><button id="backLessons" class="primary">Back to lessons</button>`; $("#backLessons").onclick=()=>select("lessons"); return}
+  $("#app").innerHTML=card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="next">Next</button></div><p class="muted">${lessonAt+1} of ${lessonQueue.length}</p>`);
+  bindCard();
+}
+function renderCapture(){
+  $("#app").innerHTML=`<div class="card"><strong>Add without duplicating</strong><label>Chinese</label><input id="capText" placeholder="学 or 学习"><label>Pinyin</label><input id="capPy" placeholder="xué"><label>Traditional, if different</label><input id="capTrad"><label>English meaning</label><input id="capMean"><label>Example you met</label><input id="capEx" placeholder="我在学校学中文。"><label>Add to lesson</label><select id="capLesson">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><div class="row" style="margin-top:10px"><button class="primary" id="capSave">Save</button></div><p id="capStatus" class="muted"></p></div>`;
+  $("#capSave").onclick=saveCapture;
+}
+function saveCapture(){
+  const text=$("#capText").value.trim(); if(!text) return;
+  const chars=[...text];
+  const lesson=$("#capLesson").value;
+  let target=byText(text);
+  if(!target){
+    target={id:"u"+Date.now(),simplified:text,traditional:$("#capTrad").value.trim(),pinyin:$("#capPy").value.trim(),sound:"",meaning:$("#capMean").value.trim(),type:chars.length>1?"expression":"character",status:"new",source:"capture"};
+    db.entries.unshift(target);
+  } else if($("#capTrad").value.trim()) target.traditional=$("#capTrad").value.trim();
+  const l=db.lessons.find(x=>x.id===lesson);
+  if(l&&!l.items.includes(target.id)) l.items.push(target.id);
+  chars.forEach(ch=>{ if(ch===text) return; let c=byText(ch); if(!c){c={id:"u"+Date.now()+ch,simplified:ch,traditional:"",pinyin:"",sound:"",meaning:"",type:"character",status:"new",source:"capture"}; db.entries.push(c)} });
+  const ex=$("#capEx").value.trim();
+  if(ex) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:ex,meaning:$("#capMean").value.trim(),source:l?l.title:""});
+  save(); $("#capStatus").textContent=byText(text)?"Saved once in the dictionary and linked to the lesson.":"Saved.";
+}
+function renderLibrary(){
+  const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
+  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${q}"><div style="height:8px"></div>`+db.entries.filter(e=>(e.simplified+e.pinyin+e.meaning).toLowerCase().includes(q)).slice(0,40).map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${e.simplified}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${e.pinyin} · ${french(e.pinyin)} · ${e.meaning}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
+  $("#libQ").oninput=renderLibrary;
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
+}
+function renderQuiz(){
+  const pool=db.entries.filter(e=>e.pinyin);
+  const target=pool[Math.floor(Math.random()*pool.length)];
+  const opts=[target].concat(pool.filter(e=>e.id!==target.id).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);
+  quiz=target.id;
+  $("#app").innerHTML=`<div class="card"><div class="muted">Listening quiz</div><button class="primary" id="play">Hear the word</button><div class="chips" style="margin-top:12px">${opts.map(e=>`<button class="chip" data-choice="${e.id}">${e.simplified}<div class="muted">${e.pinyin}</div></button>`).join("")}</div><p id="quizMsg" class="muted"></p></div>`;
+  $("#play").onclick=()=>speak(target.simplified);
+  document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>{const ok=b.dataset.choice===quiz; $("#quizMsg").textContent=ok?"Correct.":"Not this one. The word was "+target.simplified+" "+target.pinyin; grade(target.id,ok)});
+}
+function bindCard(){
+  const e=currentEntry()||entry(lessonQueue[lessonAt]); if(!e) return;
+  document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{
+    const act=b.dataset.act;
+    if(act==="hear") speak(e.simplified);
+    if(act==="examples"||act==="palace") showHint(act);
+    if(act==="again"||act==="good"){grade(e.id,act==="good"); const due=dueIds(); study=due.find(id=>id!==e.id)||due[0]||null; renderToday()}
+    if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
+  });
+}
+function openPalace(e){
+  const p=palaceFor(e)||{};
+  $("#palaceTitle").textContent="Palace · "+e.simplified;
+  $("#palaceImg").src=p.url||"memory-palace/hui.svg";
+  $("#palaceNote").textContent=p.story||"One picture for this character only.";
+  $("#palaceStory").value=p.story||"";
+  $("#palaceStatus").textContent="";
+  $("#palaceDlg").showModal();
+  $("#palaceSave").onclick=async()=>{
+    const file=$("#palaceFile").files[0];
+    let url=p.url||"";
+    if(file){
+      const path=e.simplified+"-"+Date.now()+".jpg";
+      try{
+        const r=await fetch(SUPABASE_URL+"/storage/v1/object/memory-palace-cards/"+encodeURIComponent(path),{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"content-type":file.type||"image/jpeg","x-upsert":"true"},body:file});
+        if(r.ok) url=BUCKET+encodeURIComponent(path);
+      }catch(err){}
+      if(!url) url=await new Promise(res=>{const rd=new FileReader(); rd.onload=()=>res(rd.result); rd.readAsDataURL(file)});
+    }
+    db.palace[e.id]={url,story:$("#palaceStory").value.trim(),storagePath:url};
+    save();
+    try{await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards",{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"content-type":"application/json",prefer:"resolution=merge-duplicates"},body:JSON.stringify({subject_type:e.type,subject_text:e.simplified,storage_path:url.replace(BUCKET,""),title:"Palace · "+e.simplified,note:$("#palaceStory").value.trim()})})}catch(err){}
+    $("#palaceStatus").textContent="Saved on this character.";
+    $("#palaceImg").src=url||$("#palaceImg").src;
+  };
+}
+$("#palaceClose").onclick=()=>$("#palaceDlg").close();
+async function loadRemotePalace(){
+  try{
+    const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
+    if(!r.ok) return;
+    const rows=await r.json();
+    rows.forEach(row=>{const e=byText(row.subject_text); if(!e) return; const path=row.storage_path||""; db.palace[e.id]=db.palace[e.id]||{url:path.startsWith("http")?path:BUCKET+path,story:row.note||"",storagePath:path}});
+    save(); if(tab==="today") renderToday();
+  }catch(e){}
 }
 function select(which){
- mode=which;
- buttons.forEach(b=>b.setAttribute("aria-selected",String(b.id===which)));
- const wanted=pageFor(which);
- const current=new URL(frame.src,location.href);
- const target=new URL(wanted,location.href);
- if(current.pathname!==target.pathname) frame.src=wanted;
- else if(which==="learn"||which==="games") activateMain(which);
- memoryBar.style.display="none";
- setTimeout(updateMemoryButton,100);
+  tab=which;
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===which)));
+  const titles={today:["Today","Due cards. Palace and examples stay on the character."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
+  $("#title").textContent=titles[which][0]; $("#subtitle").textContent=titles[which][1];
+  if(which==="today") renderToday();
+  if(which==="lessons") renderLessons();
+  if(which==="capture") renderCapture();
+  if(which==="library") renderLibrary();
+  if(which==="quiz") renderQuiz();
 }
-function applyMobileMainUI(doc){
- try{
-  if(doc.getElementById("mandarinMobilePatch"))return;
-  const style=doc.createElement("style");style.id="mandarinMobilePatch";style.textContent=`
-  @media(max-width:700px){
-   body{margin:0!important;padding:10px 12px 30px!important;max-width:none!important;font-family:system-ui,-apple-system,"Segoe UI",sans-serif!important}
-   #practiceTab,#gamesTab,#expressionsTab,.tabs,.tabbar,.top-tabs,[role="tablist"]{display:none!important}
-   form:has(#newCharacter),#newCharacterForm,.add-character,.character-form{display:none!important}
-   #bigchar{font-size:clamp(112px,34vw,170px)!important;line-height:1!important;margin:4px 0!important;display:block!important;overflow:visible!important}
-   #pinyin{font-size:34px!important;line-height:1.15!important}
-   #meaning{font-size:22px!important}
-   button,input,select{min-height:44px!important}
-   canvas{max-width:100%!important}
-   .container,.card,.panel,main,section{max-width:100%!important}
-  }`;
-  doc.head.appendChild(style);
-  const add=doc.getElementById("newCharacter");
-  if(add){const form=add.closest("form")||add.parentElement;if(form)form.style.display="none";}
-  addCharacterPhrasesButton(doc);
- }catch(e){console.warn(e)}
-}
-function addCharacterPhrasesButton(doc){
- try{
-  if(!doc||doc.getElementById("characterPhrasesBtn"))return;
-  const candidates=[...doc.querySelectorAll("button,[role=button],.btn")];
-  const memoryControl=candidates.find(el=>/memory|palace/i.test((el.textContent||"").trim()));
-  let host=memoryControl&&memoryControl.parentElement;
-  if(!host){
-    const textNodes=[...doc.querySelectorAll("div,span,p")];
-    const placeholder=textNodes.find(el=>/no memory card yet/i.test((el.textContent||"").trim()));
-    host=placeholder&&placeholder.parentElement;
-  }
-  if(!host)return;
-  const b=doc.createElement("button");
-  b.id="characterPhrasesBtn";
-  b.type="button";
-  b.textContent="💬 Phrases";
-  b.style.minHeight="44px";
-  b.style.padding="8px 14px";
-  b.style.marginLeft="8px";
-  b.style.border="1px solid #d0d5dd";
-  b.style.borderRadius="13px";
-  b.style.background="#fff";
-  b.style.font="600 15px/1.1 system-ui";
-  b.style.color="#111827";
-  b.addEventListener("click",()=>openPhrasesForCurrent());
-  if(getComputedStyle(host).display!=="flex"){host.style.display="flex";host.style.alignItems="center";host.style.flexWrap="wrap";host.style.gap="8px"}
-  host.appendChild(b);
- }catch(e){console.warn(e)}
-}
-function cleanOldExpressionCards(doc){
- ["old-expressions-heading","lesson-expressions-heading"].forEach(id=>{const h=doc.getElementById(id);if(h&&h.parentElement)h.parentElement.style.display="none"});
-}
-function activateMain(which){
- try{
-  const doc=frame.contentDocument;if(!doc)return;
-  cleanOldExpressionCards(doc);
-  const target=doc.getElementById(which==="games"?"gamesTab":"practiceTab");
-  if(target)target.click();
- }catch(e){}
-}
-function getCurrentSubject(){
- try{
-  const doc=frame.contentDocument;if(!doc)return null;
-  if(mode==="expressions"){
-    const write=doc.getElementById("write");
-    const text=write&&!write.classList.contains("hidden")?doc.getElementById("wWord")?.textContent:doc.getElementById("rWord")?.textContent;
-    const value=(text||"").trim();return value?{type:"expression",text:value}:null;
-  }
-  if(mode==="radicals"){
-    const value=(doc.getElementById("glyph")?.textContent||"").trim();return value?{type:"radical",text:value}:null;
-  }
-  if(mode==="learn"){
-    const value=(doc.getElementById("bigchar")?.textContent||"").trim();return value?{type:"character",text:value}:null;
-  }
- }catch(e){}
- return null;
-}
-function updateMemoryButton(){
- const s=getCurrentSubject(),key=s?s.type+"|"+s.text:"";
- if(key===lastSubject&&currentCard===cards.get(key))return;
- lastSubject=key;currentCard=cards.get(key)||null;
- if(currentCard){memoryBtn.textContent="🧠 Memory Palace for "+s.text;memoryBar.style.display="block"}else memoryBar.style.display="none";
-}
-memoryBtn.onclick=()=>{
- if(!currentCard)return;
- document.getElementById("memoryTitle").textContent=currentCard.title||("Memory Palace · "+currentCard.subject_text);
- const p=currentCard.storage_path||"";
- document.getElementById("memoryImage").src=/^(?:data:|https?:)/i.test(p)?p:STORAGE_BASE+p.split("/").map(encodeURIComponent).join("/");
- document.getElementById("memoryNote").textContent=currentCard.note||"";
- memoryDialog.showModal();
-};
-document.getElementById("memoryClose").onclick=()=>memoryDialog.close();
-memoryDialog.addEventListener("click",e=>{if(e.target===memoryDialog)memoryDialog.close()});
-
-async function openPhrasesForCurrent(){
- const s=getCurrentSubject();
- if(!s||s.type!=="character")return;
- document.getElementById("phrasesTitle").textContent="Phrases with "+s.text;
- const box=document.getElementById("phrasesContent");
- box.textContent="Loading…";
- phrasesDialog.showModal();
- try{
-   const url=SUPABASE_URL+"/rest/v1/mandarin_character_examples?select=simplified,pinyin,sound_clue,meaning_en,position&character=eq."+encodeURIComponent(s.text)+"&order=position.asc";
-   const r=await fetch(url,{headers:{apikey:SUPABASE_KEY}});
-   if(!r.ok)throw new Error("Could not load phrases");
-   const rows=await r.json();
-   if(!rows.length){box.textContent="No phrases attached yet.";return}
-   box.innerHTML="";
-   rows.forEach(x=>{
-     const item=document.createElement("div");
-     item.style.padding="10px 0";
-     item.style.borderBottom="1px solid #e5e7eb";
-     const hanzi=document.createElement("div");hanzi.style.fontSize="30px";hanzi.style.fontWeight="700";hanzi.textContent=x.simplified||"";
-     const pin=document.createElement("div");pin.style.fontSize="18px";pin.style.color="#2563eb";pin.textContent=x.pinyin||"";
-     const clue=document.createElement("div");clue.style.fontSize="14px";clue.style.color="#667085";clue.textContent=x.sound_clue||"";
-     const meaning=document.createElement("div");meaning.style.marginTop="3px";meaning.textContent=x.meaning_en||"";
-     item.append(hanzi,pin);
-     if(x.sound_clue)item.appendChild(clue);
-     item.appendChild(meaning);
-     box.appendChild(item);
-   });
- }catch(e){console.warn(e);box.textContent="I could not load the linked phrases. Please try again."}
-}
-document.getElementById("phrasesClose").onclick=()=>phrasesDialog.close();
-phrasesDialog.addEventListener("click",e=>{if(e.target===phrasesDialog)phrasesDialog.close()});
-frame.addEventListener("load",()=>{if(mode==="learn"||mode==="games"){activateMain(mode);applyMobileMainUI(frame.contentDocument);setTimeout(()=>addCharacterPhrasesButton(frame.contentDocument),250)}setTimeout(updateMemoryButton,150)});
-buttons.forEach(b=>b.addEventListener("click",()=>select(b.id)));
-setInterval(()=>{updateMemoryButton();if(mode==="learn")addCharacterPhrasesButton(frame.contentDocument)},600);
-loadCards();
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
+select("today"); loadRemotePalace();
 </script>
 </body>
 </html>
