@@ -149,12 +149,24 @@ function showLesson(){
   bindCard();
 }
 function renderCapture(){
-  $("#app").innerHTML=`<div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button" style="margin-top:8px">Save expression</button><label>Note, optional</label><input id="capNote" placeholder="from podcast, minute 12"><label>Add to lesson</label><select id="capLesson">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><p id="capStatus" class="muted"></p></div>`;
+  $("#app").innerHTML=`<div id="savedBanner" class="card hidden"></div><div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><div class="row" style="margin-top:8px"><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button">Save expression</button></div><label>Sentence you met</label><input id="capNote" placeholder="I love to play pingpong with my friends"><label>Add to lesson</label><div class="row"><select id="capLesson" style="flex:1">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><button id="newLessonCap" type="button">New lesson</button></div><p id="capStatus" class="muted"></p></div>`;
   $("#openCam").onclick=openCamera;
   $("#photoFile").onchange=()=>readPhoto($("#photoFile").files[0]);
   $("#saveChar").onclick=()=>savePicked("character");
   $("#saveExpr").onclick=()=>savePicked("expression");
+  $("#newLessonCap").onclick=newLessonFromCapture;
   startPreview();
+}
+function newLessonFromCapture(){
+  const title=prompt("Name the lesson, for example Pingpong with friends");
+  if(!title) return;
+  const id="u"+Date.now();
+  db.lessons.unshift({id,title,kind:"book",source:title,items:[]});
+  save();
+  const sel=$("#capLesson");
+  const opt=document.createElement("option");
+  opt.value=id; opt.textContent=title; sel.prepend(opt); sel.value=id;
+  $("#capStatus").textContent="Lesson created: "+title+". Save the word into it.";
 }
 let camStream=null, picked="";
 async function startPreview(){
@@ -179,10 +191,10 @@ async function readPhoto(file){
     const result=await Tesseract.recognize(file,"chi_sim+eng");
     const runs=(result.data.text.match(/[\u3400-\u9fff]+/g)||[]);
     const chars=[...new Set(runs.join("").split(""))].slice(0,12);
-    const phrase=runs.sort((a,b)=>b.length-a.length)[0]||"";
+    const phrase=runs.join("")||"";
     $("#charChips").innerHTML=chars.map(ch=>`<button class="chip" data-pick="${ch}">${ch}</button>`).join("")||"<span class='muted'>No characters found. Try closer.</span>";
     $("#phraseChip").textContent=phrase||"No phrase found";
-    picked=chars[0]||phrase;
+    picked=phrase||chars[0]||"";
     document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{picked=b.dataset.pick; document.querySelectorAll("[data-pick]").forEach(x=>x.classList.remove("on")); b.classList.add("on");});
     $("#phraseChip").onclick=()=>{picked=phrase};
     $("#camHint").textContent="Tap the character or phrase, then save.";
@@ -193,17 +205,25 @@ function savePicked(kind){
   if(!text||text.startsWith("Tap")||text.startsWith("No ")){$("#capStatus").textContent="Choose a character or phrase first."; return;}
   const value=kind==="character"?[...text][0]:text;
   const lesson=$("#capLesson").value;
+  const note=$("#capNote").value.trim();
   let target=byText(value);
+  const already=!!target;
   if(!target){
-    target={id:"u"+Date.now(),simplified:value,traditional:"",pinyin:"",sound:"",meaning:"",type:kind==="expression"?"expression":"character",status:"new",source:"photo"};
+    target={id:"u"+Date.now(),simplified:value,traditional:"",pinyin:"",sound:"",meaning:note,type:kind==="expression"?"expression":"character",status:"new",source:"photo"};
     db.entries.unshift(target);
-  }
+  } else if(note && !target.meaning) target.meaning=note;
   const l=db.lessons.find(x=>x.id===lesson);
   if(l&&!l.items.includes(target.id)) l.items.push(target.id);
-  const note=$("#capNote").value.trim();
-  if(note) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:value,meaning:"",source:note});
+  if(note || value) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:value,meaning:note,source:l?l.title:""});
   save();
-  $("#capStatus").textContent="Saved "+value+" once, and linked it to the lesson.";
+  const where=l?l.title:"the dictionary";
+  const msg=(already?"Already in the dictionary. ":"Saved. ")+value+" is in "+where+".";
+  $("#capStatus").textContent=msg;
+  const banner=$("#savedBanner");
+  banner.classList.remove("hidden");
+  banner.innerHTML="<strong>Saved</strong><div>"+msg+"</div><button id='seeSaved' type='button'>Open it</button>";
+  $("#seeSaved").onclick=()=>{study=target.id; select("today");};
+  banner.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function renderLibrary(){
   const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
