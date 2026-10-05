@@ -53,7 +53,7 @@ dialog::backdrop{background:#0008}
 .camfull video{flex:1;width:100%;object-fit:cover}
 .camfull .box{height:28%}
 .cambar{display:flex;gap:10px;justify-content:center;align-items:center;padding:14px;background:#111}
-.shot{width:68px;height:68px;border-radius:50%;border:5px solid #ddd;background:#fff;min-height:68px}
+#writer{width:min(82vw,320px);height:min(82vw,320px);margin:12px auto;border:2px solid #d0d5dd;border-radius:12px;background:#fff}
 </style>
 </head>
 <body>
@@ -67,6 +67,7 @@ dialog::backdrop{background:#0008}
 <button data-tab="quiz">Quiz</button>
 </nav>
 <dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><img id="palaceImg" alt="Memory palace for this character"><p id="palaceNote"></p><label>One sentence</label><textarea id="palaceStory" placeholder="At my kitchen table, three people meet and one yells the sound."></textarea><label>Photo of the place</label><input id="palaceFile" type="file" accept="image/*" capture="environment"><button id="palaceSave" class="primary" type="button">Save to this character</button><p id="palaceStatus" class="muted"></p></div></dialog>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
@@ -231,14 +232,45 @@ function renderLibrary(){
   $("#libQ").oninput=renderLibrary;
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
 }
+let quizMode="listen";
 function renderQuiz(){
-  const pool=db.entries.filter(e=>e.pinyin);
+  const pool=db.entries.filter(e=>e.pinyin&&[...e.simplified].length===1);
   const target=pool[Math.floor(Math.random()*pool.length)];
-  const opts=[target].concat(pool.filter(e=>e.id!==target.id).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);
   quiz=target.id;
-  $("#app").innerHTML=`<div class="card"><div class="muted">Listening quiz</div><button class="primary" id="play">Hear the word</button><div class="chips" style="margin-top:12px">${opts.map(e=>`<button class="chip" data-choice="${e.id}">${e.simplified}<div class="muted">${e.pinyin}</div></button>`).join("")}</div><p id="quizMsg" class="muted"></p></div>`;
-  $("#play").onclick=()=>speak(target.simplified);
-  document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>{const ok=b.dataset.choice===quiz; $("#quizMsg").textContent=ok?"Correct.":"Not this one. The word was "+target.simplified+" "+target.pinyin; grade(target.id,ok)});
+  const modes=`<div class="row" style="margin-bottom:10px"><button data-mode="listen" class="${quizMode==="listen"?"on":""}">Hear</button><button data-mode="speak" class="${quizMode==="speak"?"on":""}">Speak</button><button data-mode="draw" class="${quizMode==="draw"?"on":""}">Draw</button></div>`;
+  if(quizMode==="speak"){
+    $("#app").innerHTML=`<div class="card">${modes}<div class="glyph">${target.simplified}</div><div class="py">${target.pinyin}</div><div class="fr">French sound · ${french(target.pinyin)}</div><button class="primary" id="speakCheck">Say it</button><p id="quizMsg" class="muted">Tap Say it, then speak the character.</p><button id="nextQuiz" type="button">Next</button></div>`;
+    $("#speakCheck").onclick=()=>checkSpeech(target);
+  } else if(quizMode==="draw"){
+    $("#app").innerHTML=`<div class="card">${modes}<div class="py">${target.pinyin}</div><div class="fr">French sound · ${french(target.pinyin)}</div><button data-act="english" id="showEn" type="button">Show English</button><div id="englishAnswer" class="mean hidden">${target.meaning}</div><div id="writer"></div><div class="row center"><button id="watch" type="button">Watch</button><button id="nextQuiz" type="button">Next</button></div><p id="quizMsg" class="muted">Draw the character.</p></div>`;
+    $("#showEn").onclick=()=>{$("#englishAnswer").classList.toggle("hidden")};
+    try{
+      const writer=HanziWriter.create("writer",target.simplified,{width:300,height:300,padding:12,showOutline:true,showCharacter:false});
+      writer.quiz({onComplete:()=>{$("#quizMsg").textContent="Correct stroke order."; grade(target.id,true)}});
+      $("#watch").onclick=()=>{writer.cancelQuiz(); writer.animateCharacter({onComplete:()=>writer.quiz()})};
+    }catch(e){$("#quizMsg").textContent="Drawing data is not available for "+target.simplified;}
+  } else {
+    const opts=[target].concat(pool.filter(e=>e.id!==target.id).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);
+    $("#app").innerHTML=`<div class="card">${modes}<div class="muted">Listening quiz</div><button class="primary" id="play">Hear the word</button><div class="chips" style="margin-top:12px">${opts.map(e=>`<button class="chip" data-choice="${e.id}">${e.simplified}<div class="muted">${e.pinyin}</div></button>`).join("")}</div><p id="quizMsg" class="muted"></p><button id="nextQuiz" type="button">Next</button></div>`;
+    $("#play").onclick=()=>speak(target.simplified);
+    document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>{const ok=b.dataset.choice===quiz; $("#quizMsg").textContent=ok?"Correct.":"Not this one. The word was "+target.simplified+" "+target.pinyin; grade(target.id,ok)});
+  }
+  document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{quizMode=b.dataset.mode; renderQuiz()});
+  const next=$("#nextQuiz"); if(next) next.onclick=renderQuiz;
+}
+function checkSpeech(target){
+  const Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Rec){$("#quizMsg").textContent="This phone cannot check speech in the browser. Use Chrome."; return;}
+  const rec=new Rec(); rec.lang="zh-CN"; rec.interimResults=false; rec.maxAlternatives=3;
+  $("#quizMsg").textContent="Listening…";
+  rec.onresult=ev=>{
+    const heard=[...ev.results[0]].map(x=>x.transcript).join(" ");
+    const ok=heard.includes(target.simplified);
+    $("#quizMsg").textContent=ok?"Correct. You said "+heard:"Heard "+heard+". The character is "+target.simplified+".";
+    grade(target.id,ok);
+  };
+  rec.onerror=()=>{$("#quizMsg").textContent="I could not hear you. Tap Say it and try again."};
+  rec.start();
 }
 function bindCard(){
   const e=currentEntry()||entry(lessonQueue[lessonAt]); if(!e) return;
