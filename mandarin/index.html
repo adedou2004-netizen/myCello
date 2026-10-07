@@ -28,6 +28,19 @@ nav button{border:0;min-height:52px;font-size:11px;font-weight:700;color:#475467
 nav button[aria-selected="true"]{color:var(--blue);background:#eef6ff}
 .hidden{display:none!important}
 .due{font-size:42px;font-weight:800;color:var(--blue);line-height:1}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.stat{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fafafa}
+.stat b{display:block;font-size:28px;color:var(--blue);line-height:1.1;margin-top:2px}
+.calendar{margin-top:12px}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.calday,.caldow{min-height:54px;border:1px solid var(--line);border-radius:10px;padding:5px;text-align:center;background:#fff}
+.caldow{min-height:auto;border:0;background:transparent;font-size:11px;color:var(--muted);font-weight:700}
+.calday.empty{border-color:transparent;background:transparent}
+.calday.today{border-color:var(--blue);background:#eef6ff}
+.calnum{font-size:12px;color:var(--muted)}
+.calcount{font-size:17px;font-weight:800;color:var(--blue);margin-top:3px}
+@media(max-width:420px){.calday{min-height:48px;padding:4px}.calcount{font-size:15px}}
 label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
 input,select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:12px;background:#fff}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -93,12 +106,49 @@ function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function french(py){
   const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
   let s=[...String(py||"").toLowerCase()].map(c=>m[c]||c).join("").replace(/[^a-zü ]/g,"");
-  const exact={yi:"i",wu:"ou",yu:"u",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é"};
+  const exact={yi:"i",wu:"ou",yu:"u",ge:"géè",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é"};
   return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
 }
 function entry(id){return db.entries.find(e=>e.id===id)}
 function byText(text){return db.entries.find(e=>e.simplified===text||e.traditional===text)}
+function localDayStart(ts=Date.now()){const d=new Date(ts);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()}
+function effectiveDueTime(id){
+  const r=db.reviews[id];
+  const today=localDayStart();
+  if(!r||!r.next||r.next<=today+86399999) return today;
+  return localDayStart(r.next);
+}
 function dueIds(){const now=Date.now();return db.entries.filter(e=>{const r=db.reviews[e.id];return !r||!r.next||r.next<=now}).map(e=>e.id)}
+function dueCountBetween(start,end){
+  return db.entries.reduce((n,e)=>{const t=effectiveDueTime(e.id);return n+(t>=start&&t<end?1:0)},0);
+}
+function monthDueCounts(year,month){
+  const out={};
+  db.entries.forEach(e=>{
+    const d=new Date(effectiveDueTime(e.id));
+    if(d.getFullYear()===year&&d.getMonth()===month) out[d.getDate()]=(out[d.getDate()]||0)+1;
+  });
+  return out;
+}
+let calendarMonthOffset=0;
+function renderDueCalendar(){
+  const host=$("#dueCalendar"); if(!host) return;
+  const base=new Date(); base.setDate(1); base.setMonth(base.getMonth()+calendarMonthOffset);
+  const y=base.getFullYear(),m=base.getMonth();
+  const counts=monthDueCounts(y,m), first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
+  const names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const today=new Date();
+  const cells=[];
+  for(let i=0;i<first;i++) cells.push('<div class="calday empty"></div>');
+  for(let d=1;d<=days;d++){
+    const count=counts[d]||0;
+    const isToday=y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();
+    cells.push(`<div class="calday ${isToday?"today":""}"><div class="calnum">${d}</div><div class="calcount">${count||""}</div></div>`);
+  }
+  host.innerHTML=`<div class="calhead"><button id="calPrev" type="button">←</button><strong>${base.toLocaleDateString(undefined,{month:"long",year:"numeric"})}</strong><button id="calNext" type="button">→</button></div><div class="calgrid">${names.map(x=>`<div class="caldow">${x}</div>`).join("")}${cells.join("")}</div><p class="muted">A number on a day is how many items are due that day. Overdue and never-reviewed items are counted today.</p>`;
+  $("#calPrev").onclick=()=>{calendarMonthOffset--;renderDueCalendar()};
+  $("#calNext").onclick=()=>{calendarMonthOffset++;renderDueCalendar()};
+}
 function grade(id,good){
   const r=db.reviews[id]||{strength:2.5,interval:0,streak:0};
   r.streak=good?r.streak+1:0;
@@ -129,7 +179,12 @@ function renderToday(){
   const due=dueIds();
   if(!study||!due.includes(study)) study=due[0]||null;
   const e=study?entry(study):null;
-  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><div class="muted">Practice what is due. The palace belongs to the character on the card.</div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  const today=localDayStart(), tomorrow=today+86400000, next7=today+7*86400000;
+  const monthEnd=new Date(new Date().getFullYear(),new Date().getMonth()+1,1).getTime();
+  const next7Count=dueCountBetween(today,next7);
+  const monthCount=dueCountBetween(today,monthEnd);
+  $("#app").innerHTML=`<div class="card"><div class="muted">Review schedule</div><div class="stats"><div class="stat"><span class="muted">Total items</span><b>${db.entries.length}</b></div><div class="stat"><span class="muted">Due today</span><b>${due.length}</b></div><div class="stat"><span class="muted">Due next 7 days</span><b>${next7Count}</b></div><div class="stat"><span class="muted">Due this month</span><b>${monthCount}</b></div></div><button id="toggleCalendar" type="button" style="width:100%;margin-top:10px">View due calendar</button><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  $("#toggleCalendar").onclick=()=>{const cal=$("#dueCalendar");cal.classList.toggle("hidden");$("#toggleCalendar").textContent=cal.classList.contains("hidden")?"View due calendar":"Hide due calendar";if(!cal.classList.contains("hidden")) renderDueCalendar()};
   bindCard();
 }
 function renderLessons(){
