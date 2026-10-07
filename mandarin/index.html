@@ -179,12 +179,8 @@ function renderToday(){
   const due=dueIds();
   if(!study||!due.includes(study)) study=due[0]||null;
   const e=study?entry(study):null;
-  const today=localDayStart(), tomorrow=today+86400000, next7=today+7*86400000;
-  const monthEnd=new Date(new Date().getFullYear(),new Date().getMonth()+1,1).getTime();
-  const next7Count=dueCountBetween(today,next7);
-  const monthCount=dueCountBetween(today,monthEnd);
-  $("#app").innerHTML=`<div class="card"><div class="muted">Review schedule</div><div class="stats"><div class="stat"><span class="muted">Total items</span><b>${db.entries.length}</b></div><div class="stat"><span class="muted">Due today</span><b>${due.length}</b></div><div class="stat"><span class="muted">Due next 7 days</span><b>${next7Count}</b></div><div class="stat"><span class="muted">Due this month</span><b>${monthCount}</b></div></div><button id="toggleCalendar" type="button" style="width:100%;margin-top:10px">View due calendar</button><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
-  $("#toggleCalendar").onclick=()=>{const cal=$("#dueCalendar");cal.classList.toggle("hidden");$("#toggleCalendar").textContent=cal.classList.contains("hidden")?"View due calendar":"Hide due calendar";if(!cal.classList.contains("hidden")) renderDueCalendar()};
+  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><button id="toggleCalendar" type="button" style="width:100%;margin-top:10px">View month</button><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  $("#toggleCalendar").onclick=()=>{const cal=$("#dueCalendar");cal.classList.toggle("hidden");$("#toggleCalendar").textContent=cal.classList.contains("hidden")?"View month":"Hide month";if(!cal.classList.contains("hidden")) renderDueCalendar()};
   bindCard();
 }
 function renderLessons(){
