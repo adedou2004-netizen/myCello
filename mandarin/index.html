@@ -91,16 +91,26 @@ const KEY="mandarinAppV2";
 const $=s=>document.querySelector(s);
 let tab="today", study=null, reviewOrder=[], lessonQueue=[], lessonAt=0, quiz=null;
 let db=load();
+function addSmileExample(data){
+  if(!Array.isArray(data.examples)) data.examples=[];
+  const smile=data.entries.find(e=>e.simplified==="笑");
+  if(!smile) return data;
+  const surface="我经常笑。";
+  if(!data.examples.some(x=>x.entryId===smile.id && x.surface.replace(/[。.!！]/g,"")===surface.replace(/[。.!！]/g,""))){
+    data.examples.push({id:"example-smile-often",entryId:smile.id,surface,pinyin:"wǒ jīngcháng xiào",meaning:"I smile a lot.",source:"Everyday Mandarin"});
+  }
+  return data;
+}
 function load(){
   const saved=JSON.parse(localStorage.getItem(KEY)||"null");
-  if(saved&&saved.entries) return saved;
+  if(saved&&saved.entries) return addSmileExample(saved);
   const entries=SEED.map((x,i)=>({id:"s"+i,simplified:x[0],traditional:"",pinyin:x[1],sound:"",meaning:x[2],type:"character",status:"new",source:"course"}));
   const lessons=[];
   for(let n=0;n<entries.length;n+=10){
     const a=n+1,b=Math.min(entries.length,n+10);
     lessons.push({id:"L"+(n/10+1),title:"Lesson "+(n/10+1)+" · characters "+a+"–"+b,kind:"course",source:"Mandarin 200",items:entries.slice(n,n+10).map(e=>e.id)});
   }
-  return {entries,lessons,examples:[],reviews:{},palace:{}};
+  return addSmileExample({entries,lessons,examples:[],reviews:{},palace:{}});
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function french(py){
@@ -194,7 +204,7 @@ function showHint(kind){
   const box=$("#hint");
   if(kind==="examples"){
     const ex=examplesFor(e.id);
-    box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b><div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
+    box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b>${x.pinyin?`<div class="muted">${x.pinyin}</div>`:""}<div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
   }
   if(kind==="palace") openPalace(e);
 }
