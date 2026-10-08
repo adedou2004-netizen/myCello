@@ -369,14 +369,37 @@ function bindCard(){
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
   });
 }
+let skyPalaceImageUrl=null;
+async function loadSkyPalaceImage(){
+  if(skyPalaceImageUrl) return skyPalaceImageUrl;
+  const response=await fetch(SUPABASE_URL+"/storage/v1/object/authenticated/mandarin-assets/mem_sky_heaven.png",{
+    headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}
+  });
+  if(!response.ok) throw new Error("Supabase image request failed ("+response.status+")");
+  const blob=await response.blob();
+  if(!blob.type.startsWith("image/")) throw new Error("Storage did not return an image");
+  skyPalaceImageUrl=URL.createObjectURL(blob);
+  return skyPalaceImageUrl;
+}
 function openPalace(e){
   const p=palaceFor(e)||{};
+  const isSky=e.simplified==="天";
   $("#palaceTitle").textContent="Palace · "+e.simplified;
-  $("#palaceImg").src=p.url||"memory-palace/hui.svg";
-  $("#palaceNote").textContent=p.story||"One picture for this character only.";
-  $("#palaceStory").value=p.story||"";
-  $("#palaceStatus").textContent="";
+  $("#palaceImg").src=isSky?"":(p.url||"memory-palace/hui.svg");
+  $("#palaceNote").textContent=p.story||(isSky?"A big person (大), with a line above the head: sky / heaven.":"One picture for this character only.");
+  $("#palaceStory").value=p.story||(isSky?"A big person (大), with a line above the head: sky / heaven.":"");
+  $("#palaceStatus").textContent=isSky?"Loading sky memory image…":"";
   $("#palaceDlg").showModal();
+  if(isSky){
+    loadSkyPalaceImage().then(url=>{
+      if($("#palaceDlg").open && $("#palaceTitle").textContent==="Palace · 天"){
+        $("#palaceImg").src=url;
+        $("#palaceStatus").textContent="Image from mandarin-assets / mem_sky_heaven.png";
+      }
+    }).catch(err=>{
+      $("#palaceStatus").textContent="Could not load the sky image: "+err.message;
+    });
+  }
   $("#palaceSave").onclick=async()=>{
     const file=$("#palaceFile").files[0];
     let url=p.url||"";
