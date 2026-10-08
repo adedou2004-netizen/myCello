@@ -89,7 +89,7 @@ const BUCKET=SUPABASE_URL+"/storage/v1/object/public/memory-palace-cards/";
 const SEED=[["一", "yī", "one"],["二", "èr", "two"],["三", "sān", "three"],["十", "shí", "ten"],["人", "rén", "person"],["大", "dà", "big"],["小", "xiǎo", "small"],["口", "kǒu", "mouth"],["日", "rì", "sun; day"],["月", "yuè", "moon; month"],["山", "shān", "mountain"],["水", "shuǐ", "water"],["火", "huǒ", "fire"],["木", "mù", "tree; wood"],["土", "tǔ", "earth; soil"],["田", "tián", "field"],["天", "tiān", "sky; day"],["上", "shàng", "up; above"],["下", "xià", "down; below"],["中", "zhōng", "middle"],["我", "wǒ", "I; me"],["你", "nǐ", "you"],["他", "tā", "he; him"],["她", "tā", "she; her"],["们", "men", "plural marker"],["好", "hǎo", "good"],["是", "shì", "to be"],["不", "bù", "not"],["有", "yǒu", "to have"],["在", "zài", "to be at"],["这", "zhè", "this"],["那", "nà", "that"],["哪", "nǎ", "which"],["谁", "shéi", "who"],["什", "shén", "what (part)"],["么", "me", "what (part)"],["的", "de", "possessive particle"],["了", "le", "completed-action particle"],["吗", "ma", "question particle"],["呢", "ne", "question particle"],["来", "lái", "come"],["去", "qù", "go"],["看", "kàn", "look; watch"],["见", "jiàn", "see; meet"],["听", "tīng", "listen"],["说", "shuō", "speak"],["读", "dú", "read"],["写", "xiě", "write"],["学", "xué", "study; learn"],["问", "wèn", "ask"],["吃", "chī", "eat"],["喝", "hē", "drink"],["做", "zuò", "do; make"],["走", "zǒu", "walk; leave"],["跑", "pǎo", "run"],["坐", "zuò", "sit"],["站", "zhàn", "stand"],["开", "kāi", "open; start"],["关", "guān", "close"],["回", "huí", "return"],["家", "jiā", "home; family"],["爸", "bà", "dad"],["妈", "mā", "mom"],["哥", "gē", "older brother"],["姐", "jiě", "older sister"],["弟", "dì", "younger brother"],["妹", "mèi", "younger sister"],["儿", "ér", "son; child"],["女", "nǚ", "woman; daughter"],["子", "zǐ", "child"],["朋", "péng", "friend (part)"],["友", "yǒu", "friend"],["老", "lǎo", "old"],["师", "shī", "teacher"],["生", "shēng", "life; student"],["同", "tóng", "same; together"],["名", "míng", "name"],["字", "zì", "character; word"],["国", "guó", "country"],["汉", "hàn", "Han; Chinese"],["年", "nián", "year"],["今", "jīn", "today; present"],["明", "míng", "bright; next"],["昨", "zuó", "yesterday"],["时", "shí", "time; hour"],["分", "fēn", "minute; divide"],["点", "diǎn", "o’clock; point"],["早", "zǎo", "early; morning"],["晚", "wǎn", "late; evening"],["午", "wǔ", "noon"],["春", "chūn", "spring"],["夏", "xià", "summer"],["秋", "qiū", "autumn"],["冬", "dōng", "winter"],["星", "xīng", "star"],["期", "qī", "period; week"],["前", "qián", "front; before"],["后", "hòu", "back; after"],["现", "xiàn", "present; appear"],["每", "měi", "every"],["零", "líng", "zero"],["四", "sì", "four"],["五", "wǔ", "five"],["六", "liù", "six"],["七", "qī", "seven"],["八", "bā", "eight"],["九", "jiǔ", "nine"],["百", "bǎi", "hundred"],["千", "qiān", "thousand"],["万", "wàn", "ten thousand"],["多", "duō", "many; much"],["少", "shǎo", "few; little"],["几", "jǐ", "how many"],["个", "gè", "general measure word"],["本", "běn", "measure word for books"],["只", "zhī", "measure word for animals"],["杯", "bēi", "cup"],["块", "kuài", "piece; yuan"],["钱", "qián", "money"],["元", "yuán", "yuan"],["白", "bái", "white"],["黑", "hēi", "black"],["红", "hóng", "red"],["蓝", "lán", "blue"],["绿", "lǜ", "green"],["黄", "huáng", "yellow"],["色", "sè", "color"],["长", "cháng", "long"],["短", "duǎn", "short"],["高", "gāo", "tall; high"],["新", "xīn", "new"],["旧", "jiù", "old; used"],["热", "rè", "hot"],["冷", "lěng", "cold"],["快", "kuài", "fast"],["慢", "màn", "slow"],["忙", "máng", "busy"],["累", "lèi", "tired"],["难", "nán", "difficult"],["易", "yì", "easy"],["爱", "ài", "love"],["喜", "xǐ", "like; joy"],["欢", "huān", "joyous"],["想", "xiǎng", "think; want"],["知", "zhī", "know"],["道", "dào", "way; know"],["觉", "jué", "feel; perceive"],["得", "de", "complement particle"],["笑", "xiào", "smile; laugh"],["哭", "kū", "cry"],["头", "tóu", "head"],["脸", "liǎn", "face"],["眼", "yǎn", "eye"],["耳", "ěr", "ear"],["手", "shǒu", "hand"],["脚", "jiǎo", "foot"],["心", "xīn", "heart"],["身", "shēn", "body"],["病", "bìng", "illness"],["医", "yī", "medicine; doctor"],["饭", "fàn", "cooked rice; meal"],["菜", "cài", "dish; vegetable"],["茶", "chá", "tea"],["果", "guǒ", "fruit"],["米", "mǐ", "rice"],["面", "miàn", "noodles; face"],["肉", "ròu", "meat"],["鱼", "yú", "fish"],["鸡", "jī", "chicken"],["蛋", "dàn", "egg"],["书", "shū", "book"],["笔", "bǐ", "pen"],["纸", "zhǐ", "paper"],["桌", "zhuō", "table"],["椅", "yǐ", "chair"],["门", "mén", "door"],["窗", "chuāng", "window"],["房", "fáng", "room; house"],["车", "chē", "vehicle"],["路", "lù", "road"],["电", "diàn", "electricity"],["话", "huà", "speech; phone"],["脑", "nǎo", "brain"],["影", "yǐng", "shadow; film"],["网", "wǎng", "net; internet"],["机", "jī", "machine"],["校", "xiào", "school"],["店", "diàn", "shop"],["院", "yuàn", "courtyard; institute"],["馆", "guǎn", "building; hall"],["东", "dōng", "east"],["西", "xī", "west"],["南", "nán", "south"],["北", "běi", "north"],["里", "lǐ", "inside"],["外", "wài", "outside"],["左", "zuǒ", "left"],["右", "yòu", "right"],["边", "biān", "side"],["近", "jìn", "near"],["腿", "tuǐ", "leg"],["肚", "dù", "belly"],["胖", "pàng", "plump; fat"],["肝", "gān", "liver"],["很", "hěn", "very"],["太", "tài", "too; very"],["都", "dōu", "all; both"],["也", "yě", "also"],["还", "hái", "still; also"],["再", "zài", "again"],["最", "zuì", "most"],["更", "gèng", "more; even more"],["真", "zhēn", "really; true"],["别", "bié", "do not; other"],["会", "huì", "can; know how to"],["能", "néng", "can; be able to"],["要", "yào", "want; need"],["给", "gěi", "give; for"],["跟", "gēn", "with; follow"],["从", "cóng", "from; follow"],["到", "dào", "arrive; to"],["对", "duì", "correct; toward"],["为", "wèi", "for; because of"],["因", "yīn", "cause; because"],["所", "suǒ", "place; that which"],["以", "yǐ", "by; with; in order to"],["已", "yǐ", "already"],["经", "jīng", "pass through; already (part)"],["过", "guò", "pass; experiential particle"],["着", "zhe", "ongoing-state particle"],["把", "bǎ", "disposal particle; hold"],["被", "bèi", "passive marker"],["让", "ràng", "let; allow"],["叫", "jiào", "call; be called"],["怎", "zěn", "how"],["样", "yàng", "kind; manner"],["和", "hé", "and; with"],["或", "huò", "or"],["但", "dàn", "but"],["可", "kě", "can; may"],["应", "yīng", "should; ought to"],["该", "gāi", "should"],["请", "qǐng", "please; invite"],["谢", "xiè", "thank"],["没", "méi", "not have; not"],["常", "cháng", "often; common"],["次", "cì", "time; occurrence"],["第", "dì", "ordinal prefix"],["两", "liǎng", "two (before measure words)"],["半", "bàn", "half"],["号", "hào", "number; date"],["周", "zhōu", "week"],["刚", "gāng", "just now"],["才", "cái", "only then; just"],["先", "xiān", "first; earlier"],["正", "zhèng", "just; currently; correct"],["起", "qǐ", "rise; start"],["床", "chuáng", "bed"],["睡", "shuì", "sleep"],["醒", "xǐng", "wake up"],["洗", "xǐ", "wash"],["穿", "chuān", "wear; pass through"],["衣", "yī", "clothes"],["服", "fú", "clothing; serve"],["鞋", "xié", "shoe"],["买", "mǎi", "buy"],["卖", "mài", "sell"],["找", "zhǎo", "look for; find"],["换", "huàn", "change; exchange"],["用", "yòng", "use"],["拿", "ná", "take; hold"],["放", "fàng", "put; release"],["带", "dài", "bring; carry"],["送", "sòng", "give; deliver"],["等", "děng", "wait; etc."],["帮", "bāng", "help"],["进", "jìn", "enter"],["出", "chū", "exit; go out"],["入", "rù", "enter"],["离", "lí", "leave; away from"],["住", "zhù", "live; reside"],["工", "gōng", "work; labor"],["作", "zuò", "work; make"],["事", "shì", "matter; thing"],["班", "bān", "class; work shift"],["司", "sī", "manage; company (part)"],["休", "xiū", "rest"],["息", "xī", "rest; breath"],["游", "yóu", "travel; swim"],["玩", "wán", "play"],["旅", "lǚ", "travel"],["票", "piào", "ticket"],["飞", "fēi", "fly"],["场", "chǎng", "place; field"],["雨", "yǔ", "rain"],["雪", "xuě", "snow"],["风", "fēng", "wind"],["云", "yún", "cloud"],["鹅", "é", "goose"],["饿", "è", "hungry"],["页", "yè", "page"],["叶", "yè", "leaf"],["树", "shù", "tree"],["羊", "yáng", "sheep; goat"],["筷", "kuài", "chopstick (in 筷子)"],["抢", "qiǎng", "grab; snatch; seize"],["段", "duàn", "section; segment; piece"]];
 const KEY="mandarinAppV2";
 const $=s=>document.querySelector(s);
-let tab="today", study=null, lessonQueue=[], lessonAt=0, quiz=null;
+let tab="today", study=null, reviewOrder=[], lessonQueue=[], lessonAt=0, quiz=null;
 let db=load();
 function load(){
   const saved=JSON.parse(localStorage.getItem(KEY)||"null");
@@ -123,6 +123,26 @@ function effectiveDueTime(id){
   return localDayStart(r.next);
 }
 function dueIds(){const now=Date.now();return db.entries.filter(e=>{const r=db.reviews[e.id];return !r||!r.next||r.next<=now}).map(e=>e.id)}
+function syncReviewOrder(){
+  const due=dueIds(), eligible=new Set(due);
+  reviewOrder=reviewOrder.filter(id=>eligible.has(id));
+  const alreadyQueued=new Set(reviewOrder);
+  due.forEach(id=>{if(!alreadyQueued.has(id)){reviewOrder.push(id);alreadyQueued.add(id)}});
+  return due;
+}
+function shuffleReview(){
+  syncReviewOrder();
+  const previous=reviewOrder[0];
+  for(let i=reviewOrder.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [reviewOrder[i],reviewOrder[j]]=[reviewOrder[j],reviewOrder[i]];
+  }
+  if(reviewOrder.length>1&&reviewOrder[0]===previous){
+    [reviewOrder[0],reviewOrder[1]]=[reviewOrder[1],reviewOrder[0]];
+  }
+  study=reviewOrder[0]||null;
+  renderToday();
+}
 function dueCountBetween(start,end){
   return db.entries.reduce((n,e)=>{const t=effectiveDueTime(e.id);return n+(t>=start&&t<end?1:0)},0);
 }
@@ -180,10 +200,11 @@ function showHint(kind){
 }
 function currentEntry(){return study?entry(study):null}
 function renderToday(){
-  const due=dueIds();
-  if(!study||!due.includes(study)) study=due[0]||null;
+  const due=syncReviewOrder();
+  study=reviewOrder[0]||null;
   const e=study?entry(study):null;
-  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><button id="toggleCalendar" type="button" style="width:100%;margin-top:10px">View month</button><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${due.indexOf(e.id)+1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><div class="row" style="margin-top:10px"><button id="shuffleReview" type="button" ${due.length<2?"disabled":""}>Shuffle</button><button id="toggleCalendar" type="button" style="flex:1">View month</button></div><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${reviewOrder.length?due.length-reviewOrder.length+1:1} of ${due.length}</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  $("#shuffleReview").onclick=shuffleReview;
   $("#toggleCalendar").onclick=()=>{const cal=$("#dueCalendar");cal.classList.toggle("hidden");$("#toggleCalendar").textContent=cal.classList.contains("hidden")?"View month":"Hide month";if(!cal.classList.contains("hidden")) renderDueCalendar()};
   bindCard();
 }
@@ -334,7 +355,7 @@ function bindCard(){
     if(act==="hear") speak(e.simplified);
     if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
     if(act==="examples"||act==="palace") showHint(act);
-    if(act==="again"||act==="good"){grade(e.id,act==="good"); const due=dueIds(); study=due.find(id=>id!==e.id)||due[0]||null; renderToday()}
+    if(act==="again"||act==="good"){grade(e.id,act==="good"); reviewOrder=reviewOrder.filter(id=>id!==e.id); study=null; renderToday()}
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
   });
 }
