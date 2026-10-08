@@ -110,7 +110,7 @@ function french(py){
   return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
 }
 function displaySound(e){
-  const preferred={"一":"ii","十":"shii","小":"ciaa"};
+  const preferred={"一":"ii","十":"shii","小":"ciaa","水":"choui"};
   return preferred[e.simplified]||e.sound||french(e.pinyin);
 }
 function entry(id){return db.entries.find(e=>e.id===id)}
