@@ -106,8 +106,12 @@ function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function french(py){
   const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
   let s=[...String(py||"").toLowerCase()].map(c=>m[c]||c).join("").replace(/[^a-zü ]/g,"");
-  const exact={yi:"i",wu:"ou",yu:"u",ge:"géè",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é",xihuan:"çi-ONE"};
+  const exact={yi:"ii",wu:"ou",yu:"u",ge:"géè",shi:"shii",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é",xihuan:"çi-ONE",xiao:"ciaa"};
   return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
+}
+function displaySound(e){
+  const preferred={"一":"ii","十":"shii","小":"ciaa"};
+  return preferred[e.simplified]||e.sound||french(e.pinyin);
 }
 function entry(id){return db.entries.find(e=>e.id===id)}
 function byText(text){return db.entries.find(e=>e.simplified===text||e.traditional===text)}
@@ -163,7 +167,7 @@ function speak(text){const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">French sound · ${e.sound||french(e.pinyin)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind){
   const e=currentEntry(); if(!e) return;
@@ -290,10 +294,10 @@ function renderQuiz(){
   quiz=target.id;
   const modes=`<div class="row" style="margin-bottom:10px"><button data-mode="listen" class="${quizMode==="listen"?"on":""}">Hear</button><button data-mode="speak" class="${quizMode==="speak"?"on":""}">Speak</button><button data-mode="draw" class="${quizMode==="draw"?"on":""}">Draw</button></div>`;
   if(quizMode==="speak"){
-    $("#app").innerHTML=`<div class="card">${modes}<div class="glyph">${target.simplified}</div><div class="py">${target.pinyin}</div><div class="fr">French sound · ${french(target.pinyin)}</div><button class="primary" id="speakCheck">Say it</button><p id="quizMsg" class="muted">Tap Say it, then speak the character.</p><button id="nextQuiz" type="button">Next</button></div>`;
+    $("#app").innerHTML=`<div class="card">${modes}<div class="glyph">${target.simplified}</div><div class="py">${target.pinyin}</div><div class="fr">Fr-En sound · ${french(target.pinyin)}</div><button class="primary" id="speakCheck">Say it</button><p id="quizMsg" class="muted">Tap Say it, then speak the character.</p><button id="nextQuiz" type="button">Next</button></div>`;
     $("#speakCheck").onclick=()=>checkSpeech(target);
   } else if(quizMode==="draw"){
-    $("#app").innerHTML=`<div class="card">${modes}<div class="py">${target.pinyin}</div><div class="fr">French sound · ${french(target.pinyin)}</div><button data-act="english" id="showEn" type="button">Show English</button><div id="englishAnswer" class="mean hidden">${target.meaning}</div><div id="writer"></div><div class="row center"><button id="watch" type="button">Watch</button><button id="nextQuiz" type="button">Next</button></div><p id="quizMsg" class="muted">Draw the character.</p></div>`;
+    $("#app").innerHTML=`<div class="card">${modes}<div class="py">${target.pinyin}</div><div class="fr">Fr-En sound · ${french(target.pinyin)}</div><button data-act="english" id="showEn" type="button">Show English</button><div id="englishAnswer" class="mean hidden">${target.meaning}</div><div id="writer"></div><div class="row center"><button id="watch" type="button">Watch</button><button id="nextQuiz" type="button">Next</button></div><p id="quizMsg" class="muted">Draw the character.</p></div>`;
     $("#showEn").onclick=()=>{$("#englishAnswer").classList.toggle("hidden")};
     try{
       const writer=HanziWriter.create("writer",target.simplified,{width:300,height:300,padding:12,showOutline:true,showCharacter:false});
