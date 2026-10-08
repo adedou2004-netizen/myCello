@@ -79,7 +79,8 @@ dialog::backdrop{background:#0008}
 <button data-tab="library">Library</button>
 <button data-tab="quiz">Quiz</button>
 </nav>
-<dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><img id="palaceImg" alt="Memory palace for this character"><p id="palaceNote"></p><label>One sentence</label><textarea id="palaceStory" placeholder="At my kitchen table, three people meet and one yells the sound."></textarea><label>Photo of the place</label><input id="palaceFile" type="file" accept="image/*" capture="environment"><button id="palaceSave" class="primary" type="button">Save to this character</button><p id="palaceStatus" class="muted"></p></div></dialog>
+<dialog id="memoryAidDlg"><div class="dlghead"><strong id="memoryAidTitle">Memory Aid</strong><button id="memoryAidClose" type="button">Close</button></div><div class="dlgbody"><img id="memoryAidImg" alt="App-provided character memory aid" class="hidden"><p id="memoryAidNote"></p><p id="memoryAidStatus" class="muted"></p></div></dialog>
+<dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">My Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><p id="palaceIntro" class="muted"></p><label>My palace name</label><input id="palaceName" placeholder="My House"><label>Location in my palace</label><input id="palaceLocation" placeholder="Front door, kitchen, hallway…"><div id="palaceLinked"></div><img id="palaceImg" alt="My own image for this location" class="hidden"><p id="palaceNote"></p><label>My memory story</label><textarea id="palaceStory" placeholder="What happens at this location to help me remember the character?"></textarea><label>My image (optional)</label><input id="palaceFile" type="file" accept="image/*"><button id="palaceSave" class="primary" type="button">Save My Palace</button><p id="palaceStatus" class="muted"></p></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
@@ -197,16 +198,17 @@ function speak(text){const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="palace">Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="memoryAid">Memory Aid</button><button data-act="myPalace">My Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
 }
-function showHint(kind){
-  const e=currentEntry(); if(!e) return;
+function showHint(kind,e){
+  if(!e) return;
   const box=$("#hint");
   if(kind==="examples"){
     const ex=examplesFor(e.id);
     box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b>${x.pinyin?`<div class="muted">${x.pinyin}</div>`:""}<div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
   }
-  if(kind==="palace") openPalace(e);
+  if(kind==="memoryAid") openMemoryAid(e);
+  if(kind==="myPalace") openPalace(e);
 }
 function currentEntry(){return study?entry(study):null}
 function renderToday(){
@@ -364,7 +366,7 @@ function bindCard(){
     const act=b.dataset.act;
     if(act==="hear") speak(e.simplified);
     if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
-    if(act==="examples"||act==="palace") showHint(act);
+    if(act==="examples"||act==="memoryAid"||act==="myPalace") showHint(act,e);
     if(act==="again"||act==="good"){grade(e.id,act==="good"); reviewOrder=reviewOrder.filter(id=>id!==e.id); study=null; renderToday()}
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
   });
@@ -381,44 +383,101 @@ async function loadSkyPalaceImage(){
   skyPalaceImageUrl=URL.createObjectURL(blob);
   return skyPalaceImageUrl;
 }
+function openMemoryAid(e){
+  $("#memoryAidTitle").textContent="Memory Aid · "+e.simplified;
+  $("#memoryAidImg").classList.add("hidden");
+  $("#memoryAidImg").removeAttribute("src");
+  $("#memoryAidNote").textContent=e.simplified==="天"
+    ?"Above a big person (大) is the sky: the line above the head helps you remember 天."
+    :"An app-provided mnemonic image is not available for this character yet.";
+  $("#memoryAidStatus").textContent=e.simplified==="天"?"Loading image…":"";
+  $("#memoryAidDlg").showModal();
+  if(e.simplified==="天") loadSkyPalaceImage().then(url=>{
+    if(!$("#memoryAidDlg").open || $("#memoryAidTitle").textContent!=="Memory Aid · 天") return;
+    $("#memoryAidImg").src=url;
+    $("#memoryAidImg").classList.remove("hidden");
+    $("#memoryAidStatus").textContent="";
+  }).catch(err=>{
+    $("#memoryAidStatus").textContent="Could not load the image: "+err.message;
+  });
+}
+$("#memoryAidClose").onclick=()=>$("#memoryAidDlg").close();
+let activePalaceEntry=null;
+function linkedPalaceEntries(name){
+  const target=name.trim().toLowerCase();
+  if(!target) return [];
+  return db.entries.filter(item=>(db.palace[item.id]?.palaceName||"").trim().toLowerCase()===target);
+}
+function renderPalaceLinks(e){
+  const name=$("#palaceName").value.trim();
+  const others=linkedPalaceEntries(name).filter(item=>item.id!==e.id);
+  $("#palaceLinked").innerHTML=name&&others.length
+    ?'<p class="muted">Other characters in this palace:</p>'+others.map(item=>
+      '<button type="button" data-palace-entry="'+item.id+'">'+item.simplified+' — '+(db.palace[item.id]?.location||"Location not set")+'</button>'
+    ).join(" ")
+    :"";
+  document.querySelectorAll("[data-palace-entry]").forEach(button=>button.onclick=()=>{
+    const other=entry(button.dataset.palaceEntry);
+    if(other) openPalace(other);
+  });
+}
 function openPalace(e){
+  activePalaceEntry=e.id;
   const p=palaceFor(e)||{};
-  const isSky=e.simplified==="天";
-  $("#palaceTitle").textContent="Palace · "+e.simplified;
-  $("#palaceImg").src=isSky?"":(p.url||"memory-palace/hui.svg");
-  $("#palaceNote").textContent=p.story||(isSky?"A big person (大), with a line above the head: sky / heaven.":"One picture for this character only.");
-  $("#palaceStory").value=p.story||(isSky?"A big person (大), with a line above the head: sky / heaven.":"");
-  $("#palaceStatus").textContent=isSky?"Loading sky memory image…":"";
-  $("#palaceDlg").showModal();
-  if(isSky){
-    loadSkyPalaceImage().then(url=>{
-      if($("#palaceDlg").open && $("#palaceTitle").textContent==="Palace · 天"){
-        $("#palaceImg").src=url;
-        $("#palaceStatus").textContent="Image from mandarin-assets / mem_sky_heaven.png";
-      }
-    }).catch(err=>{
-      $("#palaceStatus").textContent="Could not load the sky image: "+err.message;
+  $("#palaceTitle").textContent="My Palace · "+e.simplified;
+  const hasPersonalMemory=!!(p.palaceName||p.location||p.story||p.url);
+  $("#palaceIntro").textContent=hasPersonalMemory
+    ?"Your personal memory location for this character. You can connect other characters by using the same palace name."
+    :"Create My First Palace: give your palace a name, choose a location for this character, and optionally add your own picture.";
+  $("#palaceName").value=p.palaceName||"";
+  $("#palaceLocation").value=p.location||"";
+  $("#palaceImg").classList.toggle("hidden",!p.url);
+  if(p.url) $("#palaceImg").src=p.url; else $("#palaceImg").removeAttribute("src");
+  $("#palaceNote").textContent=p.location?"Location: "+p.location:"";
+  $("#palaceStory").value=p.story||"";
+  $("#palaceFile").value="";
+  $("#palaceStatus").textContent="";
+  $("#palaceSave").textContent=hasPersonalMemory?"Save My Palace":"Create My First Palace";
+  renderPalaceLinks(e);
+  if(!$("#palaceDlg").open) $("#palaceDlg").showModal();
+}
+$("#palaceName").oninput=()=>{
+  const e=entry(activePalaceEntry);
+  if(e) renderPalaceLinks(e);
+};
+$("#palaceClose").onclick=()=>$("#palaceDlg").close();
+$("#palaceSave").onclick=async()=>{
+  const e=entry(activePalaceEntry);
+  if(!e) return;
+  const name=$("#palaceName").value.trim(),location=$("#palaceLocation").value.trim();
+  if(!name||!location){
+    $("#palaceStatus").textContent="Give your palace a name and this character a location.";
+    return;
+  }
+  const p=palaceFor(e)||{};
+  const file=$("#palaceFile").files[0];
+  let url=p.url||"";
+  if(file){
+    const path=e.simplified+"-"+Date.now()+".jpg";
+    try{
+      const response=await fetch(SUPABASE_URL+"/storage/v1/object/memory-palace-cards/"+encodeURIComponent(path),{
+        method:"POST",
+        headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"content-type":file.type||"image/jpeg","x-upsert":"true"},
+        body:file
+      });
+      if(response.ok) url=BUCKET+encodeURIComponent(path);
+    }catch(err){}
+    if(!url) url=await new Promise(resolve=>{
+      const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(file);
     });
   }
-  $("#palaceSave").onclick=async()=>{
-    const file=$("#palaceFile").files[0];
-    let url=p.url||"";
-    if(file){
-      const path=e.simplified+"-"+Date.now()+".jpg";
-      try{
-        const r=await fetch(SUPABASE_URL+"/storage/v1/object/memory-palace-cards/"+encodeURIComponent(path),{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"content-type":file.type||"image/jpeg","x-upsert":"true"},body:file});
-        if(r.ok) url=BUCKET+encodeURIComponent(path);
-      }catch(err){}
-      if(!url) url=await new Promise(res=>{const rd=new FileReader(); rd.onload=()=>res(rd.result); rd.readAsDataURL(file)});
-    }
-    db.palace[e.id]={url,story:$("#palaceStory").value.trim(),storagePath:url};
-    save();
-    try{await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards",{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"content-type":"application/json",prefer:"resolution=merge-duplicates"},body:JSON.stringify({subject_type:e.type,subject_text:e.simplified,storage_path:url.replace(BUCKET,""),title:"Palace · "+e.simplified,note:$("#palaceStory").value.trim()})})}catch(err){}
-    $("#palaceStatus").textContent="Saved on this character.";
-    $("#palaceImg").src=url||$("#palaceImg").src;
-  };
-}
-$("#palaceClose").onclick=()=>$("#palaceDlg").close();
+  const story=$("#palaceStory").value.trim();
+  db.palace[e.id]={...p,palaceName:name,location,story,url,storagePath:url};
+  save();
+  $("#palaceStatus").textContent="Saved in this browser. Your character is linked to "+name+" at "+location+".";
+  openPalace(e);
+  $("#palaceStatus").textContent="Saved in this browser. Your character is linked to "+name+" at "+location+".";
+};
 async function loadRemotePalace(){
   try{
     const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
@@ -431,7 +490,7 @@ async function loadRemotePalace(){
 function select(which){
   tab=which;
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===which)));
-  const titles={today:["Today","Due cards. Palace and examples stay on the character."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
+  const titles={today:["Today","Due cards with Memory Aid, My Palace and examples."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
   $("#title").textContent=titles[which][0]; $("#subtitle").textContent=titles[which][1];
   if(which!=="capture") stopPreview();
   if(which==="today") renderToday();
