@@ -121,7 +121,7 @@ function french(py){
   return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
 }
 function displaySound(e){
-  const preferred={"一":"ii","十":"shii","小":"ciaa","水":"chouii","院":"yienne","口":"KHOWL","木":"mou","土":"tOOOO"};
+  const preferred={"一":"ii","十":"shii","小":"ciaa","水":"chouii","院":"yienne","口":"KHOWL","木":"mou","土":"tOOOO","见":"tsien"};
   return preferred[e.simplified]||e.sound||french(e.pinyin);
 }
 function entry(id){return db.entries.find(e=>e.id===id)}
@@ -371,34 +371,37 @@ function bindCard(){
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
   });
 }
-let skyPalaceImageUrl=null;
-async function loadSkyPalaceImage(){
-  if(skyPalaceImageUrl) return skyPalaceImageUrl;
-  const response=await fetch(SUPABASE_URL+"/storage/v1/object/authenticated/mandarin-assets/mem_sky_heaven.png",{
+const MEMORY_AIDS={
+  "天":{file:"mem_sky_heaven.png",note:"Above a big person (大) is the sky: the line above the head helps you remember 天."},
+  "见":{file:"mem_see_meet.png",note:"An eye on legs goes out to meet someone. The old form evokes an eye above a person: to see or meet."}
+};
+const memoryAidImageUrls={};
+async function loadMemoryAidImage(file){
+  if(memoryAidImageUrls[file]) return memoryAidImageUrls[file];
+  const response=await fetch(SUPABASE_URL+"/storage/v1/object/authenticated/mandarin-assets/"+encodeURIComponent(file),{
     headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}
   });
   if(!response.ok) throw new Error("Supabase image request failed ("+response.status+")");
   const blob=await response.blob();
   if(!blob.type.startsWith("image/")) throw new Error("Storage did not return an image");
-  skyPalaceImageUrl=URL.createObjectURL(blob);
-  return skyPalaceImageUrl;
+  return memoryAidImageUrls[file]=URL.createObjectURL(blob);
 }
 function openMemoryAid(e){
-  $("#memoryAidTitle").textContent="Memory Aid · "+e.simplified;
+  const asset=MEMORY_AIDS[e.simplified];
+  const title="Memory Aid · "+e.simplified;
+  $("#memoryAidTitle").textContent=title;
   $("#memoryAidImg").classList.add("hidden");
   $("#memoryAidImg").removeAttribute("src");
-  $("#memoryAidNote").textContent=e.simplified==="天"
-    ?"Above a big person (大) is the sky: the line above the head helps you remember 天."
-    :"An app-provided mnemonic image is not available for this character yet.";
-  $("#memoryAidStatus").textContent=e.simplified==="天"?"Loading image…":"";
+  $("#memoryAidNote").textContent=asset?asset.note:"An app-provided mnemonic image is not available for this character yet.";
+  $("#memoryAidStatus").textContent=asset?"Loading image…":"";
   $("#memoryAidDlg").showModal();
-  if(e.simplified==="天") loadSkyPalaceImage().then(url=>{
-    if(!$("#memoryAidDlg").open || $("#memoryAidTitle").textContent!=="Memory Aid · 天") return;
+  if(asset) loadMemoryAidImage(asset.file).then(url=>{
+    if(!$("#memoryAidDlg").open || $("#memoryAidTitle").textContent!==title) return;
     $("#memoryAidImg").src=url;
     $("#memoryAidImg").classList.remove("hidden");
     $("#memoryAidStatus").textContent="";
   }).catch(err=>{
-    $("#memoryAidStatus").textContent="Could not load the image: "+err.message;
+    if($("#memoryAidTitle").textContent===title) $("#memoryAidStatus").textContent="Could not load the image: "+err.message;
   });
 }
 $("#memoryAidClose").onclick=()=>$("#memoryAidDlg").close();
