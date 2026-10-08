@@ -106,7 +106,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function french(py){
   const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
   let s=[...String(py||"").toLowerCase()].map(c=>m[c]||c).join("").replace(/[^a-zü ]/g,"");
-  const exact={yi:"i",wu:"ou",yu:"u",ge:"géè",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é"};
+  const exact={yi:"i",wu:"ou",yu:"u",ge:"géè",shi:"cheu",zhi:"djeu",chi:"tcheu",ri:"jeu",zi:"dzeu",ci:"tseu",si:"seu",hui:"houéï",xue:"su-é",xihuan:"çi-ONE"};
   return s.split(/\s+/).filter(Boolean).map(w=>exact[w]||w.replace(/^zh/,"dj").replace(/^ch/,"tch").replace(/^sh/,"ch").replace(/^j/,"dts").replace(/^q/,"tchi").replace(/^x/,"s").replace(/^r/,"j")).join(" ");
 }
 function entry(id){return db.entries.find(e=>e.id===id)}
