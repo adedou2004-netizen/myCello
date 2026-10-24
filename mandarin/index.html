@@ -338,17 +338,103 @@ function renderLibrary(){
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
 }
 let quizMode="listen";
-let activeSpeechRecognition=null;
-function stopSpeechListening(){
-  const rec=activeSpeechRecognition;
-  if(!rec)return;
-  activeSpeechRecognition=null;
-  try{rec.stop()}catch(e){}
-  const btn=$("#speakCheck");if(btn)btn.disabled=false;
-  const stop=$("#stopSpeak");if(stop)stop.classList.add("hidden");
-  const label=$("#quizMsg");if(label&&label.textContent==="Listening…")label.textContent="Stopped listening. Tap Say it to try again.";
+let speakRecorder=null,speakStream=null,speakChunks=[],speakAudioUrl=null,speakAudio=null;
+let speakLevelContext=null,speakLevelFrame=null;
+function clearSpeakRecording(){
+ if(speakRecorder&&speakRecorder.state==="recording"){try{speakRecorder.stop()}catch(e){}}
+ speakRecorder=null;
+ if(speakStream){speakStream.getTracks().forEach(track=>track.stop());speakStream=null}
+ if(speakLevelFrame){cancelAnimationFrame(speakLevelFrame);speakLevelFrame=null}
+ if(speakLevelContext){speakLevelContext.close().catch(()=>{});speakLevelContext=null}
+ if(speakAudio){speakAudio.pause();speakAudio=null}
+ if(speakAudioUrl){URL.revokeObjectURL(speakAudioUrl);speakAudioUrl=null}
+ speakChunks=[];
 }
-
+function stopSpeechListening(){ // Leave microphone clean when changing screens.
+ clearSpeakRecording();
+}
+function updateRecordButtons(isRecording){
+ const start=$("#speakCheck"),stop=$("#stopSpeak");
+ if(start)start.disabled=isRecording;
+ if(stop){stop.classList.toggle("hidden",!isRecording);stop.disabled=!isRecording}
+}
+function showRecordLevel(stream){
+ try{
+  const context=new (window.AudioContext||window.webkitAudioContext)();
+  speakLevelContext=context;
+  const analyser=context.createAnalyser();analyser.fftSize=1024;
+  context.createMediaStreamSource(stream).connect(analyser);
+  const values=new Uint8Array(analyser.fftSize);
+  const meter=$("#speakMeter");
+  function tick(){
+   if(!speakStream||!meter)return;
+   analyser.getByteTimeDomainData(values);
+   let squared=0;
+   for(let i=0;i<values.length;i++){const v=(values[i]-128)/128;squared+=v*v}
+   const rms=Math.sqrt(squared/values.length);
+   meter.value=Math.min(100,Math.round(rms*350));
+   speakLevelFrame=requestAnimationFrame(tick);
+  }
+  tick();
+ }catch(e){const m=$("#speakMeter");if(m)m.hidden=true}
+}
+async function beginSpeechRecording(){
+ if(speakRecorder&&speakRecorder.state==="recording")return;
+ const msg=$("#quizMsg");
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){
+  if(msg)msg.textContent="Microphone recording is unavailable. Open the app in Chrome over HTTPS.";
+  return;
+ }
+ clearSpeakRecording();
+ updateRecordButtons(true);
+ if(msg)msg.textContent="Asking for microphone access…";
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  if(!document.getElementById("speakCheck") || quizMode!=="speak" || tab!=="quiz"){
+   stream.getTracks().forEach(track=>track.stop());return;
+  }
+  speakStream=stream;
+  const formats=["audio/webm;codecs=opus","audio/mp4","audio/webm",""];
+  const format=formats.find(type=>!type||MediaRecorder.isTypeSupported(type));
+  const recorder=format?new MediaRecorder(stream,{mimeType:format}):new MediaRecorder(stream);
+  speakRecorder=recorder;
+  speakChunks=[];
+  recorder.ondataavailable=event=>{if(event.data?.size)speakChunks.push(event.data)};
+  recorder.onerror=()=>{if(msg)msg.textContent="Microphone recording failed. Check the browser permissions.";finishSpeechRecording()};
+  recorder.onstop=()=>{
+    const blob=new Blob(speakChunks,{type:recorder.mimeType||"audio/webm"});
+    speakStream?.getTracks().forEach(track=>track.stop());
+    speakStream=null;
+    if(speakLevelFrame)cancelAnimationFrame(speakLevelFrame);
+    speakLevelFrame=null;
+    if(speakLevelContext){speakLevelContext.close().catch(()=>{});speakLevelContext=null}
+    updateRecordButtons(false);
+    if(blob.size>0 && $("#playMySpeech")){
+      speakAudioUrl=URL.createObjectURL(blob);
+      speakAudio=new Audio(speakAudioUrl);
+      $("#playMySpeech").disabled=false;
+      if(msg)msg.textContent="Recording captured ("+Math.round(blob.size/1024)+" KB). Tap Play mine to hear it, or record again.";
+    }else if(msg)msg.textContent="No audio was captured. Check your microphone and try again.";
+    speakChunks=[];
+    speakRecorder=null;
+  };
+  recorder.start();
+  if(msg)msg.textContent="Recording… speak now. Tap Stop when finished.";
+  const meter=$("#speakMeter");if(meter)meter.hidden=false;
+  showRecordLevel(stream);
+ }catch(error){
+  updateRecordButtons(false);
+  if(msg)msg.textContent=error.name==="NotAllowedError"?"Microphone permission denied. Allow the microphone in your browser settings.":"Could not start recording: "+error.message;
+ }
+}
+function finishSpeechRecording(){
+ if(speakRecorder&&speakRecorder.state==="recording")speakRecorder.stop();
+}
+function playMySpeech(){
+ if(!speakAudio)return;
+ speakAudio.currentTime=0;
+ speakAudio.play().catch(()=>{const m=$("#quizMsg");if(m)m.textContent="Playback blocked. Tap Play mine again."});
+}
 function renderQuiz(){
   stopSpeechListening();
   const pool=db.entries.filter(e=>e.pinyin&&[...e.simplified].length===1);
@@ -356,9 +442,11 @@ function renderQuiz(){
   quiz=target.id;
   const modes=`<div class="row" style="margin-bottom:10px"><button data-mode="listen" class="${quizMode==="listen"?"on":""}">Hear</button><button data-mode="speak" class="${quizMode==="speak"?"on":""}">Speak</button><button data-mode="draw" class="${quizMode==="draw"?"on":""}">Draw</button></div>`;
   if(quizMode==="speak"){
-    $("#app").innerHTML=`<div class="card">${modes}<div class="glyph">${target.simplified}</div><div class="py">${target.pinyin}</div><div class="fr">Fr-En sound · ${french(target.pinyin)}</div><div class="row"><button class="primary" id="speakCheck" type="button">Say it</button><button id="stopSpeak" type="button" class="hidden">■ Stop listening</button></div><p id="quizMsg" class="muted" role="status" aria-live="polite">Tap Say it, then speak the character.</p><button id="nextQuiz" type="button">Next</button></div>`;
-    $("#speakCheck").onclick=()=>checkSpeech(target);
-    $("#stopSpeak").onclick=stopSpeechListening;
+    $("#app").innerHTML=`<div class="card">${modes}<div class="glyph">${target.simplified}</div><div class="py">${target.pinyin}</div><div class="fr">Fr-En sound · ${french(target.pinyin)}</div><div class="row"><button class="primary" id="speakCheck" type="button">● Record</button><button id="stopSpeak" type="button" class="hidden">■ Stop</button><button id="playMySpeech" type="button" disabled>▶ Play mine</button><button id="referenceSpeech" type="button">▶ Dictionary</button></div><progress id="speakMeter" max="100" value="0" hidden style="width:100%;height:12px;margin-top:12px" aria-label="Microphone input level"></progress><p id="quizMsg" class="muted" role="status" aria-live="polite">Tap Record, speak, then Stop. Your sound stays in this browser tab.</p><button id="nextQuiz" type="button">Next</button></div>`;
+    $("#speakCheck").onclick=beginSpeechRecording;
+    $("#stopSpeak").onclick=finishSpeechRecording;
+    $("#playMySpeech").onclick=playMySpeech;
+    $("#referenceSpeech").onclick=()=>speak(target.simplified);
   } else if(quizMode==="draw"){
     $("#app").innerHTML=`<div class="card">${modes}<div class="py">${target.pinyin}</div><div class="fr">Fr-En sound · ${french(target.pinyin)}</div><button data-act="english" id="showEn" type="button">Show English</button><div id="englishAnswer" class="mean hidden">${target.meaning}</div><div id="writer"></div><div class="row center"><button id="watch" type="button">Watch</button><button id="nextQuiz" type="button">Next</button></div><p id="quizMsg" class="muted">Draw the character.</p></div>`;
     $("#showEn").onclick=()=>{$("#englishAnswer").classList.toggle("hidden")};
@@ -375,46 +463,6 @@ function renderQuiz(){
   }
   document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{quizMode=b.dataset.mode; renderQuiz()});
   const next=$("#nextQuiz"); if(next) next.onclick=renderQuiz;
-}
-function checkSpeech(target){
-  if(activeSpeechRecognition)return;
-  const Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const msg=$("#quizMsg"),say=$("#speakCheck"),stop=$("#stopSpeak");
-  if(!Rec){if(msg)msg.textContent="Speech recognition is unavailable in this browser. Try Chrome.";return;}
-  const rec=new Rec();
-  rec.lang="zh-CN";rec.interimResults=false;rec.maxAlternatives=3;rec.continuous=false;
-  activeSpeechRecognition=rec;
-  let received=false,finished=false;
-  const finish=()=>{
-    if(finished)return;finished=true;
-    if(activeSpeechRecognition===rec)activeSpeechRecognition=null;
-    if(say)say.disabled=false;
-    if(stop)stop.classList.add("hidden");
-  };
-  rec.onresult=ev=>{
-    if(activeSpeechRecognition!==rec)return;
-    received=true;
-    const heard=[...ev.results[0]].map(x=>x.transcript).join(" ");
-    const ok=heard.includes(target.simplified);
-    if(msg)msg.textContent=ok?"Correct. You said "+heard:"Heard "+heard+". The character is "+target.simplified+".";
-    grade(target.id,ok);
-  };
-  rec.onerror=ev=>{
-    if(activeSpeechRecognition!==rec)return;
-    if(msg)msg.textContent=ev.error==="not-allowed"?"Microphone access was blocked. Allow microphone permission in Chrome.":ev.error==="no-speech"?"No speech detected. Tap Say it to try again.":"Speech recognition stopped ("+ev.error+"). Try again.";
-    finish();
-  };
-  rec.onend=()=>{
-    if(!finished&&activeSpeechRecognition===rec&&!received&&msg)msg.textContent="Stopped listening. No speech was recognized. Tap Say it to try again.";
-    finish();
-  };
-  if(say)say.disabled=true;
-  if(stop)stop.classList.remove("hidden");
-  if(msg)msg.textContent="Listening…";
-  try{rec.start()}catch(e){
-    finish();
-    if(msg)msg.textContent="Could not start the microphone. Check browser permissions and try again.";
-  }
 }
 function bindCard(){
   const e=currentEntry()||entry(lessonQueue[lessonAt]); if(!e) return;
