@@ -1,55 +1,111 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mandarin pronunciation comparison</title>
+<title>Mandarin · Hear and record</title>
 <style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#1f2937;background:#f5f7fb}*{box-sizing:border-box}
-body{max-width:720px;margin:auto;padding:16px 14px 70px}h1{font-size:1.45rem;margin:10px 0}a{color:#136ad5}
-.card{background:white;border:1px solid #dce3eb;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 1px 3px #ddd6}
-.big{text-align:center;font-size:clamp(95px,27vw,150px);line-height:1.3} .pinyin{text-align:center;font-size:40px}.meaning{text-align:center;font-size:22px;color:#566477}
-label{font-weight:650;display:block;margin:10px 0}button,select,input{font:inherit}button{border:1px solid #bfd0e3;border-radius:12px;background:#fff;padding:12px;min-height:48px;margin:4px 4px 4px 0}button.primary{background:#176bda;border-color:#176bda;color:#fff;font-weight:700}button:disabled{opacity:.5}
-canvas{display:block;width:100%;height:116px;border-radius:10px;background:#f1f6fa}#pitch{height:180px}
-.help{font-size:.92rem;color:#536071;line-height:1.55}.status{min-height:24px;color:#405872}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:14px}.dot{display:inline-block;width:12px;height:12px;border-radius:100%;margin-right:5px}.teal{background:#099c9d}.blue{background:#176bda}
-</style></head>
-<body><a href="../">← Mandarin app</a><h1>Pronunciation comparison</h1>
-<section class="card">
-<label for="word">Practice word</label>
-<select id="word"><option value="shu">书 — shū — book</option><option value="other">Another word (upload a reference recording)</option></select>
-<div id="glyph" class="big" lang="zh">书</div><div id="pinyin" class="pinyin">shū</div><div id="meaning" class="meaning">book · first tone</div>
-</section>
-<section class="card"><h2>1. Mandarin reference</h2>
-<p class="help">Real native-speaker recording for 书 (shū), from the Shtooka Project, via Wikimedia Commons. This is audio data, not an invented waveform.</p>
-<button id="playRef" class="primary">▶ Hear example</button><label for="refFile">Or select a reference audio file for another word</label><input id="refFile" type="file" accept="audio/*">
-<div id="refStatus" class="status" aria-live="polite">Loading example…</div><canvas id="refWave" aria-label="Reference audio waveform"></canvas>
-</section>
-<section class="card"><h2>2. Your recording</h2>
-<button id="record" class="primary">● Record</button><button id="stop" disabled>■ Stop</button><button id="playMine" disabled>▶ Play mine</button>
-<div id="mineStatus" class="status" aria-live="polite">Record yourself saying the word once.</div><canvas id="myWave" aria-label="Your waveform"></canvas>
-</section>
-<section class="card"><h2>3. Compare the pitch (tone)</h2><div class="legend"><span><i class="dot teal"></i>Mandarin example</span><span><i class="dot blue"></i>Your voice</span></div>
-<canvas id="pitch" aria-label="Pitch patterns for both recordings"></canvas>
-<p id="analysis" class="help">Record your voice to see both pitch patterns. Shapes are aligned by relative time; absolute pitch varies naturally between speakers.</p>
-<p class="help">Waveform height represents signal strength, not the Mandarin tone. The pitch curves are estimates and may have gaps when a consonant is unvoiced or microphone quality is poor. They are not a pronunciation score.</p></section>
-<p class="help">Reference credit: Wei Gao &amp; Vion Nicolas, Shtooka Project, <a href="https://commons.wikimedia.org/wiki/File:Zh-sh%C5%AB.ogg">Zh-shū.ogg</a>, CC BY 2.0 France.</p>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f5f7fb;color:#1f2937}
+*{box-sizing:border-box}body{max-width:680px;margin:0 auto;padding:12px 12px 32px}
+a{color:#1565ce}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:14px}
+.panel{border:1px solid #dbe3ed;border-radius:16px;background:white;padding:12px;margin-top:10px}
+.picker{display:flex;gap:8px;align-items:center}.picker label{font-size:14px;font-weight:700;white-space:nowrap}
+select{padding:9px;min-width:0;width:100%;font:inherit;border:1px solid #cbd5e1;border-radius:10px;background:#fff}
+.word{text-align:center;font-size:clamp(82px,21vw,124px);line-height:1.24;font-family:"Noto Serif SC","Songti SC",serif}
+.py{text-align:center;font-size:27px;font-weight:700}.meaning{text-align:center;color:#667085;font-size:15px}
+.soundRow{display:flex;align-items:center;gap:8px;margin:8px 0}.soundRow button{flex:0 0 auto}
+button{min-height:44px;border:1px solid #b8c9dc;background:white;color:#172b46;border-radius:11px;padding:9px 11px;font-size:15px;font-weight:650}
+button.primary{background:#1668d5;border-color:#1668d5;color:white}button.recording{background:#b91c1c;border-color:#b91c1c;color:white}
+button:disabled{opacity:.48}
+canvas{display:block;flex:1;min-width:0;width:100%;height:62px;border:1px solid #e5ebf1;border-radius:10px;background:#f4f8fc}
+.small{font-size:12px;color:#667085;line-height:1.45;min-height:18px}
+h1{font-size:18px;margin:2px 0}.heading{font-size:14px;font-weight:750;margin:0 0 4px}
+.legend{font-size:12px;color:#526071}
+@media(max-width:350px){button{font-size:13px;padding:8px}.word{font-size:80px}}
+</style></head><body>
+<header><a href="../">← Mandarin app</a><span class="legend">Hear · Record · Compare</span></header>
+<main class="panel">
+<div class="picker"><label for="word">Vocabulary</label><select id="word" aria-label="Choose vocabulary"></select></div>
+<div id="glyph" class="word" lang="zh">书</div><div id="pinyin" class="py">shū</div><div id="meaning" class="meaning">book</div>
+<div class="heading">Dictionary pronunciation</div>
+<div class="soundRow"><button id="playRef" class="primary" disabled>▶ Hear it</button><canvas id="refWave" aria-label="Dictionary recording waveform"></canvas></div>
+<div id="refStatus" class="small" role="status">Loading saved dictionary audio…</div>
+<div class="heading" style="margin-top:14px">Your pronunciation</div>
+<div class="soundRow"><button id="record">● Record</button><button id="playMine" disabled>▶ Mine</button><canvas id="mineWave" aria-label="Your microphone waveform"></canvas></div>
+<div id="mineStatus" class="small" role="status">Record a short example; it stays only in this browser tab.</div>
+<div class="small" style="margin-top:8px">Compare both sounds and waveform shapes. Waveform height shows loudness, not Mandarin tone.</div>
+</main>
 <script>
+"use strict";
+const API="https://dbqrenlvinqheyjppxby.supabase.co/functions/v1/mandarin-dictionary-audio";
 const $=id=>document.getElementById(id);
-const REF='https://commons.wikimedia.org/wiki/Special:Redirect/file/Zh-sh%C5%AB.ogg';
-let ctx,refBuffer=null,myBuffer=null,myUrl=null,stream=null,recorder=null,parts=[];
-const audioCtx=()=>ctx||(ctx=new (window.AudioContext||window.webkitAudioContext)());
-function plotWave(id,buffer,color){const c=$(id),w=c.width=Math.max(320,Math.round(c.clientWidth*devicePixelRatio)),h=c.height=Math.round(c.clientHeight*devicePixelRatio),g=c.getContext('2d');g.clearRect(0,0,w,h);g.strokeStyle='#b7c8d8';g.beginPath();g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();if(!buffer)return;
-const data=buffer.getChannelData(0);g.strokeStyle=color;g.lineWidth=Math.max(1,devicePixelRatio);g.beginPath();const stride=Math.max(1,Math.floor(data.length/w));for(let x=0;x<w;x++){let peak=0;let start=x*stride;for(let j=start;j<Math.min(start+stride,data.length);j++)peak=Math.max(peak,Math.abs(data[j]));let amp=peak*h*.43;g.moveTo(x,h/2-amp);g.lineTo(x,h/2+amp)}g.stroke()}
-function getPitch(buffer){if(!buffer)return[];const sr=buffer.sampleRate,data=buffer.getChannelData(0),size=Math.round(sr*.04),hop=Math.round(sr*.02),out=[];for(let at=0;at+size<data.length;at+=hop){let rms=0;for(let i=0;i<size;i++)rms+=data[at+i]*data[at+i];rms=Math.sqrt(rms/size);if(rms<.009){out.push(null);continue}const min=Math.round(sr/500),max=Math.min(Math.round(sr/75),Math.floor(size/2));let best=0,lag=0;for(let k=min;k<=max;k++){let a=0,b=0,c=0;for(let i=0;i<size-k;i+=2){let v=data[at+i],u=data[at+i+k];a+=v*u;b+=v*v;c+=u*u}let corr=a/Math.sqrt(b*c+1e-12);if(corr>best){best=corr;lag=k}}out.push(best>.73&&lag?sr/lag:null)}return out}
-function drawPitch(){const c=$('pitch'),w=c.width=Math.max(320,Math.round(c.clientWidth*devicePixelRatio)),h=c.height=Math.round(c.clientHeight*devicePixelRatio),g=c.getContext('2d');g.clearRect(0,0,w,h);g.strokeStyle='#cedae6';for(let n=1;n<4;n++){g.beginPath();g.moveTo(0,h*n/4);g.lineTo(w,h*n/4);g.stroke()}
-const R=getPitch(refBuffer),M=getPitch(myBuffer),all=[...R,...M].filter(v=>v!==null);if(!all.length)return;const lo=Math.max(65,Math.min(...all)*.85),hi=Math.max(lo+65,Math.max(...all)*1.15);function curve(points,color){g.strokeStyle=color;g.lineWidth=Math.max(2,devicePixelRatio*2);g.beginPath();let active=false;points.forEach((v,i)=>{if(v===null){active=false;return}let x=14+i/Math.max(1,points.length-1)*(w-28),y=h-14-(v-lo)/(hi-lo)*(h-28);if(active)g.lineTo(x,y);else g.moveTo(x,y);active=true});g.stroke()}curve(R,'#099c9d');curve(M,'#176bda')}
+let context,reference=null,mine=null,recorder=null,stream=null,chunks=[],generation=0;
+const audioCtx=()=>context||(context=new (window.AudioContext||window.webkitAudioContext)());
+function getEntries(){
+try{const saved=JSON.parse(localStorage.getItem("mandarinAppV2")||"null");
+if(saved&&Array.isArray(saved.entries))return saved.entries.filter(x=>x.simplified&&x.pinyin).map(x=>({text:x.simplified,pinyin:x.pinyin,meaning:x.meaning||""}));}catch(e){}
+return [{text:"书",pinyin:"shū",meaning:"book"}];
+}
+const entries=getEntries();
+const params=new URLSearchParams(location.search),requested=params.get("word")||"书";
+if(!entries.some(x=>x.text===requested))entries.unshift({text:requested,pinyin:"",meaning:""});
+const select=$("word");
+entries.forEach((e,i)=>{const option=document.createElement("option");option.value=String(i);option.textContent=e.text+" · "+e.pinyin;select.append(option)});
+select.value=String(Math.max(0,entries.findIndex(x=>x.text===requested)));
+function draw(canvas,buffer,color){
+const ratio=window.devicePixelRatio||1,w=canvas.width=Math.max(1,Math.round(canvas.clientWidth*ratio)),h=canvas.height=Math.round(62*ratio),ctx=canvas.getContext("2d");
+ctx.clearRect(0,0,w,h);ctx.strokeStyle="#d2dbe6";ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+if(!buffer)return;
+const data=buffer.getChannelData(0),stride=Math.max(1,Math.ceil(data.length/w));ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,ratio);ctx.beginPath();
+for(let x=0;x<w;x++){let peak=0;const start=x*stride;for(let j=start;j<Math.min(data.length,start+stride);j++)peak=Math.max(peak,Math.abs(data[j]));const size=peak*h*.44;ctx.moveTo(x,h/2-size);ctx.lineTo(x,h/2+size)}
+ctx.stroke();
+}
+function render(){draw($("refWave"),reference,"#15958c");draw($("mineWave"),mine,"#266dda")}
 async function decode(blob){return audioCtx().decodeAudioData(await blob.arrayBuffer())}
-function render(){plotWave('refWave',refBuffer,'#099c9d');plotWave('myWave',myBuffer,'#176bda');drawPitch()}
-async function referenceFrom(blob){try{refBuffer=await decode(blob);$('refStatus').textContent='Example ready ('+refBuffer.duration.toFixed(1)+' seconds).';$('playRef').disabled=false;render()}catch(e){refBuffer=null;$('refStatus').textContent='Unable to decode this audio format. Try MP3, WAV, or OGG in a supported browser.';render()}}
-async function loadReference(){try{$('playRef').disabled=true;let r=await fetch(REF);if(!r.ok)throw Error('HTTP '+r.status);await referenceFrom(await r.blob())}catch(e){$('refStatus').textContent='Could not download native-speaker example. You may upload a reference recording below.';$('playRef').disabled=true}}
-function playBuffer(buffer){if(!buffer)return;const c=audioCtx(),source=c.createBufferSource();source.buffer=buffer;source.connect(c.destination);c.resume();source.start()}
-$('playRef').onclick=()=>playBuffer(refBuffer);$('playMine').onclick=()=>playBuffer(myBuffer);
-$('refFile').onchange=async e=>{let f=e.target.files[0];if(f)await referenceFrom(f)};
-$('word').onchange=()=>{if($('word').value==='other'){$('glyph').textContent='字';$('pinyin').textContent='Your word';$('meaning').textContent='Upload a matching native-speaker recording';refBuffer=null;$('refStatus').textContent='Choose a reference recording below.';$('playRef').disabled=true;render()}else{$('glyph').textContent='书';$('pinyin').textContent='shū';$('meaning').textContent='book · first tone';loadReference()}};
-$('record').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false}});parts=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};recorder.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());try{let blob=new Blob(parts,{type:recorder.mimeType});myBuffer=await decode(blob);$('mineStatus').textContent='Recorded '+myBuffer.duration.toFixed(1)+' seconds. You can record again.';$('playMine').disabled=false;render();$('analysis').textContent='Compare the shapes: a first-tone syllable should have a fairly steady voiced pitch. Pitch estimates can be noisy, so listen to both recordings too.'}catch(e){$('mineStatus').textContent='Audio format not supported for analysis. Try another browser.'}};recorder.start();$('mineStatus').textContent='Recording… say the word clearly.';$('record').disabled=true;$('stop').disabled=false}catch(e){$('mineStatus').textContent='Microphone permission is needed. Open this page over HTTPS and allow microphone access.'}};
-$('stop').onclick=()=>{if(recorder&&recorder.state==='recording')recorder.stop();$('record').disabled=false;$('stop').disabled=true};
-window.addEventListener('resize',render);render();loadReference();
+async function loadReference(){
+const current=++generation,chosen=entries[Number(select.value)],text=chosen.text;
+$("glyph").textContent=text;$("pinyin").textContent=chosen.pinyin||"";
+$("meaning").textContent=chosen.meaning||"";reference=null;mine=null;render();
+$("playRef").disabled=true;$("playMine").disabled=true;
+$("mineStatus").textContent="Record a short example; it stays only in this browser tab.";
+$("refStatus").textContent="Loading saved dictionary audio…";
+const u=new URL(location.href);u.searchParams.set("word",text);history.replaceState(null,"",u);
+try{
+const response=await fetch(API+"?text="+encodeURIComponent(text));
+if(!response.ok)throw Error("Dictionary lookup unavailable ("+response.status+")");
+const item=await response.json();
+if(current!==generation)return;
+if(item.pinyin)$("pinyin").textContent=item.pinyin;
+if(!item.audio_url){$("refStatus").textContent="No saved dictionary recording for this entry yet.";return;}
+const audio=await fetch(item.audio_url);
+if(!audio.ok)throw Error("Audio download failed ("+audio.status+")");
+const buffer=await decode(await audio.blob());
+if(current!==generation)return;
+reference=buffer;$("playRef").disabled=false;
+$("refStatus").textContent="Saved recording ready · "+buffer.duration.toFixed(1)+" seconds.";
+render();
+}catch(error){if(current===generation)$("refStatus").textContent="Could not load saved audio: "+error.message}
+}
+async function play(buffer){if(!buffer)return;const c=audioCtx();await c.resume();const source=c.createBufferSource();source.buffer=buffer;source.connect(c.destination);source.start();}
+$("playRef").onclick=()=>play(reference);$("playMine").onclick=()=>play(mine);
+function stopRecording(){if(recorder&&recorder.state==="recording")recorder.stop()}
+$("record").onclick=async()=>{
+if(recorder&&recorder.state==="recording"){stopRecording();return;}
+if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$("mineStatus").textContent="Microphone recording is not supported here. Open in Chrome over HTTPS.";return;}
+try{
+stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];
+const local=new MediaRecorder(stream);recorder=local;
+$("record").textContent="■ Stop";$("record").classList.add("recording");$("mineStatus").textContent="Recording…";
+local.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)};
+local.onstop=async()=>{
+stream?.getTracks().forEach(t=>t.stop());stream=null;
+$("record").textContent="● Record";$("record").classList.remove("recording");
+try{mine=await decode(new Blob(chunks,{type:local.mimeType}));$("playMine").disabled=false;$("mineStatus").textContent="Your recording is ready · "+mine.duration.toFixed(1)+" seconds. Tap Mine to listen.";render()}
+catch(e){$("mineStatus").textContent="Could not read this recording. Try Chrome.";}
+chunks=[];recorder=null;
+};
+local.start();
+}catch(error){$("record").textContent="● Record";$("record").classList.remove("recording");$("mineStatus").textContent="Microphone permission is needed: "+error.message;}
+};
+select.onchange=()=>{stopRecording();loadReference()};
+window.addEventListener("resize",render);
+window.addEventListener("pagehide",()=>{stopRecording();stream?.getTracks().forEach(t=>t.stop());});
+render();loadReference();
 </script></body></html>
