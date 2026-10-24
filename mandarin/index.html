@@ -71,7 +71,7 @@ dialog::backdrop{background:#0008}
 </head>
 <body>
 <header><h1 id="title">Today</h1><div class="sub" id="subtitle">Due cards, with the palace and examples on the character</div></header>
-<div style="padding:7px 14px;background:#eaf3ff;border-bottom:1px solid #bfd7fd;text-align:right;font-size:14px"><a href="./pronunciation/" style="color:#145ec1;font-weight:700">Pronunciation comparison ↗</a></div>
+<div style="padding:7px 14px;background:#eaf3ff;border-bottom:1px solid #bfd7fd;text-align:right;font-size:14px"><a href="./pronunciation/" style="color:#145ec1;font-weight:700">Hear · Compare · Record ↗</a></div>
 <main id="app"></main>
 <nav>
 <button data-tab="today" aria-selected="true">Today</button>
@@ -195,11 +195,28 @@ function grade(id,good){
 }
 function examplesFor(id){return db.examples.filter(x=>x.entryId===id)}
 function palaceFor(e){return db.palace[e.id]||null}
-function speak(text){const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u.rate=.75;speechSynthesis.cancel();speechSynthesis.speak(u)}
+const DICTIONARY_AUDIO_API=SUPABASE_URL+"/functions/v1/mandarin-dictionary-audio";
+const dictionaryAudioCache=new Map();
+let activeAudio=null;
+async function speak(text){
+  const fallback=()=>{const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u.rate=.75;speechSynthesis.cancel();speechSynthesis.speak(u)};
+  try{
+    if(activeAudio){activeAudio.pause();activeAudio=null;}
+    let url=dictionaryAudioCache.get(text);
+    if(url===undefined){
+      const response=await fetch(DICTIONARY_AUDIO_API+"?text="+encodeURIComponent(text));
+      if(!response.ok)throw Error("Audio lookup failed");
+      const data=await response.json();url=data.audio_url||null;dictionaryAudioCache.set(text,url);
+    }
+    if(!url){fallback();return}
+    const audio=new Audio(url);activeAudio=audio;
+    await audio.play();
+  }catch(error){fallback();}
+}
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="memoryAid">Memory Aid</button><button data-act="myPalace">My Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">Hear</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="memoryAid">Memory Aid</button><button data-act="myPalace">My Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">▶ Hear</button><button data-act="compare">◉ Compare / Record</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind,e){
   if(!e) return;
@@ -366,6 +383,7 @@ function bindCard(){
   document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{
     const act=b.dataset.act;
     if(act==="hear") speak(e.simplified);
+    if(act==="compare") location.href="./pronunciation/?word="+encodeURIComponent(e.simplified);
     if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
     if(act==="examples"||act==="memoryAid"||act==="myPalace") showHint(act,e);
     if(act==="again"||act==="good"){grade(e.id,act==="good"); reviewOrder=reviewOrder.filter(id=>id!==e.id); study=null; renderToday()}
