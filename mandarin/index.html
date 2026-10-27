@@ -347,7 +347,8 @@ function savePicked(kind){
 }
 function renderLibrary(){
   const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
-  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${q}"><div style="height:8px"></div>`+db.entries.filter(e=>(e.simplified+e.pinyin+e.meaning).toLowerCase().includes(q)).slice(0,40).map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${e.simplified}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${e.pinyin} · ${french(e.pinyin)} · ${e.meaning}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
+  const list=db.entries.filter(e=>(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.type||"")).toLowerCase().includes(q));
+  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${q}"><div style="height:8px"></div><p class="muted">Showing ${list.length} of ${db.entries.length}. Lessons are lists. This is the full dictionary.</p>`+list.map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${e.simplified}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${e.type||"character"} · ${e.pinyin||"no pinyin"} · ${french(e.pinyin)} · ${e.meaning||"no meaning yet"}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
   $("#libQ").oninput=renderLibrary;
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
 }
