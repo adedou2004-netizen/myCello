@@ -6,71 +6,80 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mandarin</title>
 <style>
-:root{--blue:#1473e6;--ink:#1f2937;--muted:#667085;--line:#e5e7eb;--bg:#f6f7fb}
+:root{--green:#58CC02;--green-d:#46A302;--ink:#3C3C3C;--muted:#777;--line:#E5E5E5;--bg:#F7F7F7;--blue:#1CB0F6}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
-body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px 10px}
-h1{margin:0;font-size:22px} .sub{color:var(--muted);font-size:13px;margin-top:2px}
-main{padding:12px}
-.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 12px}
-.glyph{font-size:clamp(84px,28vw,128px);line-height:1;text-align:center;font-family:"Songti SC","Noto Serif SC",serif}
-.trad{text-align:center;color:var(--muted);font-size:18px;margin-top:4px}
-.py{text-align:center;font-size:28px;font-weight:750;margin-top:6px}
-.fr{text-align:center;color:var(--blue);font-weight:700;margin-top:2px}
-.mean{text-align:center;font-size:18px;margin:6px 0 10px}
+body{font-family:"Nunito","Avenir Next",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:#fff;padding:10px 16px 8px}
+h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:center}
+.sub{color:var(--muted);font-size:12px;text-align:center;margin-top:1px}
+.sessionbar{height:14px;background:#E5E5E5;border-radius:99px;overflow:hidden;margin:8px 0 0}
+.sessionbar span{display:block;height:100%;background:var(--green);border-radius:99px}
+main{padding:12px 14px}
+.card{background:#fff;border:2px solid #E5E5E5;border-radius:18px;padding:16px;margin:0 0 12px;box-shadow:0 2px 0 #E5E5E5}
+.glyph{font-size:clamp(96px,32vw,140px);line-height:1;text-align:center;font-family:"Noto Serif SC","Songti SC",serif;font-weight:600}
+.trad{text-align:center;color:var(--muted);font-size:16px;margin-top:2px}
+.py{text-align:center;font-size:32px;font-weight:800;margin-top:4px}
+.fr{text-align:center;color:var(--blue);font-weight:800;margin-top:2px;font-size:15px}
+.mean{text-align:center;font-size:20px;font-weight:800;margin:8px 0;color:#58A700}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row.center{justify-content:center}
 button,input,select,textarea{font:inherit}
-button{min-height:48px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px}
-button.primary{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
-button.on{background:#eef6ff;color:var(--blue);border-color:#bfdbfe}
-nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:20}
-nav button{border:0;min-height:52px;font-size:11px;font-weight:700;color:#475467}
-nav button[aria-selected="true"]{color:var(--blue);background:#eef6ff}
+button{min-height:48px;border:2px solid #E5E5E5;background:#fff;border-radius:16px;padding:10px 14px;font-weight:800;color:var(--ink);box-shadow:0 3px 0 #E5E5E5}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #E5E5E5}
+button.primary{background:var(--green);color:#fff;border-color:var(--green-d);box-shadow:0 4px 0 var(--green-d)}
+button.on{background:#DDF4FF;color:var(--blue);border-color:#84D8FF}
+nav{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;background:#fff;border-top:2px solid #E5E5E5;padding:4px 2px calc(4px + env(safe-area-inset-bottom));z-index:20}
+nav button{border:0;box-shadow:none;min-height:56px;font-size:11px;font-weight:800;color:#AFAFAF;border-radius:12px;padding:4px}
+nav button[aria-selected="true"]{color:var(--green);background:#F0FFE6}
 .hidden{display:none!important}
-.due{font-size:42px;font-weight:800;color:var(--blue);line-height:1}
+.due{font-size:40px;font-weight:800;color:var(--green);line-height:1}
 .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
-.stat{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fafafa}
-.stat b{display:block;font-size:28px;color:var(--blue);line-height:1.1;margin-top:2px}
+.stat{border:2px solid #E5E5E5;border-radius:16px;padding:10px;background:#fff}
+.stat b{display:block;font-size:28px;color:var(--green);line-height:1.1;margin-top:2px}
 .calendar{margin-top:12px}
 .calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.calday,.caldow{min-height:54px;border:1px solid var(--line);border-radius:10px;padding:5px;text-align:center;background:#fff}
-.caldow{min-height:auto;border:0;background:transparent;font-size:11px;color:var(--muted);font-weight:700}
+.calday,.caldow{min-height:54px;border:2px solid #E5E5E5;border-radius:12px;padding:5px;text-align:center;background:#fff}
+.caldow{min-height:auto;border:0;background:transparent;font-size:11px;color:var(--muted);font-weight:800}
 .calday.empty{border-color:transparent;background:transparent}
-.calday.today{border-color:var(--blue);background:#eef6ff}
+.calday.today{border-color:var(--green);background:#F0FFE6}
 .calnum{font-size:12px;color:var(--muted)}
-.calcount{font-size:17px;font-weight:800;color:var(--blue);margin-top:3px}
+.calcount{font-size:17px;font-weight:800;color:var(--green);margin-top:3px}
 @media(max-width:420px){.calday{min-height:48px;padding:4px}.calcount{font-size:15px}}
-label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
-input,select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:12px;background:#fff}
+label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin:10px 0 4px}
+input,select,textarea{width:100%;border:2px solid #E5E5E5;border-radius:14px;padding:12px;background:#fff;font-weight:700}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{min-height:42px;font-size:20px}
-.ex{border-top:1px solid var(--line);padding:8px 0}
+.chip{min-height:56px;font-size:22px;font-weight:800}
+.ex{border-top:2px solid #E5E5E5;padding:8px 0}
 .ex b{font-size:20px}
-dialog{border:0;border-radius:18px;padding:0;width:min(94vw,560px);box-shadow:0 20px 60px #0005}
+dialog{border:0;border-radius:20px;padding:0;width:min(94vw,560px);box-shadow:0 20px 60px #0006}
 dialog::backdrop{background:#0008}
-.dlghead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
-.dlgbody{padding:12px}
-.dlgbody img{width:100%;border-radius:12px;max-height:62vh;object-fit:contain;background:#fffaf0}
-.muted{color:var(--muted);font-size:13px}
-.listbtn{width:100%;text-align:left;margin-bottom:8px}
-.progress{height:8px;background:#eaecf0;border-radius:99px;overflow:hidden;margin-top:8px}
-.progress span{display:block;height:100%;background:var(--blue)}
+.dlghead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:2px solid #E5E5E5}
+.dlgbody{padding:14px}
+.dlgbody img{width:100%;border-radius:14px;max-height:62vh;object-fit:contain;background:#fffaf0}
+.muted{color:var(--muted);font-size:13px;font-weight:700}
+.listbtn{width:100%;text-align:left;margin-bottom:0}
+.progress{height:12px;background:#E5E5E5;border-radius:99px;overflow:hidden;margin-top:8px}
+.progress span{display:block;height:100%;background:var(--green)}
 .finder{position:relative;border-radius:16px;overflow:hidden;background:#111;min-height:210px}
 .finder video,.finder img{width:100%;height:220px;object-fit:cover;display:block;background:#111}
-.box{position:absolute;left:50%;top:50%;width:68%;height:46%;transform:translate(-50%,-50%);border:4px solid #16e016;border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
-.kicker{font-size:12px;letter-spacing:.04em;color:#98a2b3;font-weight:700;margin:12px 0 6px}
-.phrase{width:100%;font-size:28px;color:var(--blue);background:#eef6ff;border-color:#dbeafe}
+.box{position:absolute;left:50%;top:50%;width:68%;height:46%;transform:translate(-50%,-50%);border:4px solid #58CC02;border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+.kicker{font-size:12px;letter-spacing:.06em;color:#AFAFAF;font-weight:800;margin:12px 0 6px}
+.phrase{width:100%;font-size:28px;color:var(--blue);background:#E6F7FF;border-color:#84D8FF}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.tools button{min-height:44px;font-size:13px;padding:8px}
+.answer{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:12px}
+.answer button{min-height:54px;font-size:16px}
 .note{display:flex;gap:8px;align-items:center}
 .camfull{position:fixed;inset:0;z-index:40;background:#000;color:#fff;display:flex;flex-direction:column}
 .camfull video{flex:1;width:100%;object-fit:cover}
 .camfull .box{height:28%}
 .cambar{display:flex;gap:10px;justify-content:center;align-items:center;padding:14px;background:#111}
-#writer{width:min(82vw,320px);height:min(82vw,320px);margin:12px auto;border:2px solid #d0d5dd;border-radius:12px;background:#fff}
+#writer{width:min(82vw,320px);height:min(82vw,320px);margin:12px auto;border:2px solid #E5E5E5;border-radius:16px;background:#fff}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Due cards, with the palace and examples on the character</div></header>
+<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Keep the streak. One character at a time.</div><div class="sessionbar"><span id="sessionFill" style="width:0%"></span></div></header>
 <main id="app"></main>
 <nav>
 <button data-tab="today" aria-selected="true">Today</button>
@@ -215,7 +224,7 @@ async function speak(text){
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">Fr-En sound · ${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="row center"><button data-act="english">Show English</button><button class="primary" data-act="memoryAid">Memory Aid</button><button data-act="myPalace">My Palace</button><button data-act="examples">Examples${ex.length?" · "+ex.length:""}</button><button data-act="hear">▶ Hear</button><button data-act="compare">◉ Compare / Record</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind,e){
   if(!e) return;
@@ -232,7 +241,10 @@ function renderToday(){
   const due=syncReviewOrder();
   study=reviewOrder[0]||null;
   const e=study?entry(study):null;
-  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><div class="row" style="margin-top:10px"><button id="shuffleReview" type="button" ${due.length<2?"disabled":""}>Shuffle</button><button id="toggleCalendar" type="button" style="flex:1">View month</button></div><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${reviewOrder.length} remaining in review</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
+  const done=Math.max(0,(db.entries.length||1)-due.length);
+  const pct=Math.round(100*done/Math.max(1,db.entries.length));
+  const fill=$("#sessionFill"); if(fill) fill.style.width=pct+"%";
+  $("#app").innerHTML=`<div class="card"><div class="muted">Due today</div><div class="due">${due.length}</div><div class="row" style="margin-top:10px"><button id="shuffleReview" type="button" ${due.length<2?"disabled":""}>Shuffle</button><button id="toggleCalendar" type="button" style="flex:1">Month</button></div><div id="dueCalendar" class="calendar hidden"></div></div>`+(e?card(e,`<div class="answer"><button data-act="again">Again</button><button class="primary" data-act="good">Knew it</button></div><p class="muted">${reviewOrder.length} left</p>`):`<div class="card">Nothing due. Practice a lesson, or capture a new word.</div>`);
   $("#shuffleReview").onclick=shuffleReview;
   $("#toggleCalendar").onclick=()=>{const cal=$("#dueCalendar");cal.classList.toggle("hidden");$("#toggleCalendar").textContent=cal.classList.contains("hidden")?"View month":"Hide month";if(!cal.classList.contains("hidden")) renderDueCalendar()};
   bindCard();
@@ -264,7 +276,7 @@ function openLesson(id){
 function showLesson(){
   const id=lessonQueue[lessonAt]; const e=id?entry(id):null;
   if(!e){$("#app").innerHTML=`<div class="card">Lesson finished.</div><button id="backLessons" class="primary">Back to lessons</button>`; $("#backLessons").onclick=()=>select("lessons"); return}
-  $("#app").innerHTML=card(e,`<div class="row center" style="margin-top:10px"><button data-act="again">Again</button><button class="primary" data-act="next">Next</button></div><p class="muted">${lessonAt+1} of ${lessonQueue.length}</p>`);
+  $("#app").innerHTML=card(e,`<div class="answer"><button data-act="again">Again</button><button class="primary" data-act="next">Next</button></div><p class="muted">${lessonAt+1} of ${lessonQueue.length}</p>`);
   bindCard();
 }
 function renderCapture(){
