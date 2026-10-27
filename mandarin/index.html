@@ -238,9 +238,22 @@ function renderToday(){
   bindCard();
 }
 function renderLessons(){
-  $("#app").innerHTML=`<div class="card"><button class="primary" id="newLesson" type="button">New lesson from a book or class</button><p class="muted">A lesson is a list. The character stays once in the dictionary.</p></div>`+db.lessons.map(l=>`<button class="listbtn card" data-lesson="${l.id}"><strong>${l.title}</strong><div class="muted">${l.kind} · ${l.items.length} items</div><div class="progress"><span style="width:${Math.round(100*l.items.filter(id=>db.reviews[id]&&db.reviews[id].streak>=3).length/Math.max(1,l.items.length))}%"></span></div></button>`).join("");
+  $("#app").innerHTML=`<div class="card"><button class="primary" id="newLesson" type="button">New lesson from a book or class</button><p class="muted">A lesson is a list. Deleting a lesson does not delete the characters.</p></div>`+db.lessons.map(l=>`<div class="card" style="display:flex;gap:8px;align-items:center"><button class="listbtn" data-lesson="${l.id}" style="flex:1;margin:0;border:0;background:transparent;text-align:left"><strong>${l.title}</strong><div class="muted">${l.kind} · ${l.items.length} items</div><div class="progress"><span style="width:${Math.round(100*l.items.filter(id=>db.reviews[id]&&db.reviews[id].streak>=3).length/Math.max(1,l.items.length))}%"></span></div></button><button data-del="${l.id}" type="button">Delete</button></div>`).join("");
   $("#newLesson").onclick=()=>{const title=prompt("Lesson name, for example The Little Prince, chapter 2"); if(!title) return; db.lessons.unshift({id:"u"+Date.now(),title,kind:"book",source:title,items:[]}); save(); renderLessons()};
   document.querySelectorAll("[data-lesson]").forEach(b=>b.onclick=()=>openLesson(b.dataset.lesson));
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>deleteLesson(b.dataset.del));
+}
+function deleteLesson(id){
+  const l=db.lessons.find(x=>x.id===id); if(!l) return;
+  if(!confirm("Delete \""+l.title+"\"? The characters stay in the dictionary.")) return;
+  db.lessons=db.lessons.filter(x=>x.id!==id);
+  save();
+  if(tab==="lessons") renderLessons();
+  else if(tab==="capture"){
+    const sel=$("#capLesson");
+    [...sel.options].forEach(o=>{if(o.value===id) o.remove()});
+    $("#capStatus").textContent="Deleted "+l.title+". Characters are still in the dictionary.";
+  }
 }
 function openLesson(id){
   const l=db.lessons.find(x=>x.id===id); if(!l) return;
@@ -255,12 +268,13 @@ function showLesson(){
   bindCard();
 }
 function renderCapture(){
-  $("#app").innerHTML=`<div id="savedBanner" class="card hidden"></div><div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><div class="row" style="margin-top:8px"><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button">Save expression</button></div><label>Sentence you met</label><input id="capNote" placeholder="I love to play pingpong with my friends"><label>Add to lesson</label><div class="row"><select id="capLesson" style="flex:1">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><button id="newLessonCap" type="button">New lesson</button></div><p id="capStatus" class="muted"></p></div>`;
+  $("#app").innerHTML=`<div id="savedBanner" class="card hidden"></div><div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><div class="row" style="margin-top:8px"><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button">Save expression</button></div><label>Sentence you met</label><input id="capNote" placeholder="I love to play pingpong with my friends"><label>Add to lesson</label><div class="row"><select id="capLesson" style="flex:1">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><button id="newLessonCap" type="button">New lesson</button><button id="delLessonCap" type="button">Delete</button></div><p id="capStatus" class="muted"></p></div>`;
   $("#openCam").onclick=openCamera;
   $("#photoFile").onchange=()=>readPhoto($("#photoFile").files[0]);
   $("#saveChar").onclick=()=>savePicked("character");
   $("#saveExpr").onclick=()=>savePicked("expression");
   $("#newLessonCap").onclick=newLessonFromCapture;
+  $("#delLessonCap").onclick=()=>deleteLesson($("#capLesson").value);
   startPreview();
 }
 function newLessonFromCapture(){
