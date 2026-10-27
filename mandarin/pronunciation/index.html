@@ -15,6 +15,7 @@ button{min-height:44px;border:1px solid #b8c9dc;background:white;color:#172b46;b
 button.primary{background:#1668d5;border-color:#1668d5;color:white}button.recording{background:#b91c1c;border-color:#b91c1c;color:white}
 button:disabled{opacity:.48}
 canvas{display:block;flex:1;min-width:0;width:100%;height:62px;border:1px solid #e5ebf1;border-radius:10px;background:#f4f8fc}
+#pitch{width:100%;height:170px;margin-top:8px}
 .small{font-size:12px;color:#667085;line-height:1.45;min-height:18px}
 h1{font-size:18px;margin:2px 0}.heading{font-size:14px;font-weight:750;margin:0 0 4px}
 .legend{font-size:12px;color:#526071}
@@ -30,7 +31,11 @@ h1{font-size:18px;margin:2px 0}.heading{font-size:14px;font-weight:750;margin:0 
 <div class="heading" style="margin-top:14px">Your pronunciation</div>
 <div class="soundRow"><button id="record">● Record</button><button id="playMine" disabled>▶ Mine</button><canvas id="mineWave" aria-label="Your microphone waveform"></canvas></div>
 <div id="mineStatus" class="small" role="status">Record a short example; it stays only in this browser tab.</div>
-<div class="small" style="margin-top:8px">Compare both sounds and waveform shapes. Waveform height shows loudness, not Mandarin tone.</div>
+<div class="small" style="margin-top:8px">The thin bars are loudness. The curve below is the tone you can see.</div>
+<div class="heading" style="margin-top:14px">Tone shape</div>
+<div class="legend"><span style="color:#94a3b8">Expected</span> · <span style="color:#15958c">Dictionary</span> · <span style="color:#266dda">Yours</span></div>
+<canvas id="pitch" aria-label="Pitch contour comparison"></canvas>
+<div id="toneLabel" class="small"></div>
 </main>
 <script>
 "use strict";
@@ -57,7 +62,80 @@ const data=buffer.getChannelData(0),stride=Math.max(1,Math.ceil(data.length/w));
 for(let x=0;x<w;x++){let peak=0;const start=x*stride;for(let j=start;j<Math.min(data.length,start+stride);j++)peak=Math.max(peak,Math.abs(data[j]));const size=peak*h*.44;ctx.moveTo(x,h/2-size);ctx.lineTo(x,h/2+size)}
 ctx.stroke();
 }
-function render(){draw($("refWave"),reference,"#15958c");draw($("mineWave"),mine,"#266dda")}
+function render(){draw($("refWave"),reference,"#15958c");draw($("mineWave"),mine,"#266dda");drawPitch()}
+function toneOf(py){
+  if(/[āēīōūǖ]/.test(py)) return 1;
+  if(/[áéíóúǘ]/.test(py)) return 2;
+  if(/[ǎěǐǒǔǚ]/.test(py)) return 3;
+  if(/[àèìòùǜ]/.test(py)) return 4;
+  return 0;
+}
+function expectedShape(tone){
+  const n=40, out=[];
+  for(let i=0;i<n;i++){
+    const t=i/(n-1);
+    if(tone===1) out.push(.72);
+    else if(tone===2) out.push(.35+.5*t);
+    else if(tone===3) out.push(t<.5?.55-.35*(t/.5):.2+.5*((t-.5)/.5));
+    else if(tone===4) out.push(.82-.55*t);
+    else out.push(null);
+  }
+  return out;
+}
+function getPitch(buffer){
+  if(!buffer) return [];
+  const sr=buffer.sampleRate, data=buffer.getChannelData(0);
+  const size=Math.round(sr*.04), hop=Math.round(sr*.02), out=[];
+  for(let at=0;at+size<data.length;at+=hop){
+    let rms=0; for(let i=0;i<size;i++) rms+=data[at+i]*data[at+i];
+    rms=Math.sqrt(rms/size);
+    if(rms<.01){out.push(null); continue}
+    const min=Math.round(sr/500), max=Math.min(Math.round(sr/75), Math.floor(size/2));
+    let best=0, lag=0;
+    for(let k=min;k<=max;k++){
+      let a=0,b=0,c=0;
+      for(let i=0;i<size-k;i+=2){const v=data[at+i], u=data[at+i+k]; a+=v*u; b+=v*v; c+=u*u}
+      const corr=a/Math.sqrt(b*c+1e-12);
+      if(corr>best){best=corr; lag=k}
+    }
+    out.push(best>.72&&lag?sr/lag:null);
+  }
+  return out;
+}
+function drawPitch(){
+  const canvas=$("pitch");
+  const ratio=window.devicePixelRatio||1;
+  const w=canvas.width=Math.max(1,Math.round(canvas.clientWidth*ratio));
+  const h=canvas.height=Math.round(170*ratio);
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle="#e5ebf1";
+  for(let n=1;n<4;n++){ctx.beginPath(); ctx.moveTo(0,h*n/4); ctx.lineTo(w,h*n/4); ctx.stroke()}
+  const py=$("pinyin").textContent||"";
+  const tone=toneOf(py);
+  const names=["neutral","first · high and flat","second · rising","third · dip then rise","fourth · falling"];
+  $("toneLabel").textContent=tone?("Expected shape: "+names[tone]):"No tone mark yet.";
+  const R=getPitch(reference), M=getPitch(mine);
+  const voiced=[...R,...M].filter(v=>v!==null);
+  const lo=voiced.length?Math.max(70, Math.min(...voiced)*.8):80;
+  const hi=voiced.length?Math.max(lo+80, Math.max(...voiced)*1.15):320;
+  function curve(points, color, width){
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.beginPath();
+    let active=false;
+    points.forEach((v,i)=>{
+      if(v===null){active=false; return}
+      const x=16+i/Math.max(1,points.length-1)*(w-32);
+      const y=h-16-(v-lo)/(hi-lo)*(h-32);
+      if(active) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+      active=true;
+    });
+    ctx.stroke();
+  }
+  const expected=expectedShape(tone).map(v=>v===null?null:lo+(hi-lo)*v);
+  curve(expected,"#94a3b8", Math.max(2,ratio*1.5));
+  curve(R,"#15958c", Math.max(2.5,ratio*2));
+  curve(M,"#266dda", Math.max(2.5,ratio*2));
+}
 async function decode(blob){return audioCtx().decodeAudioData(await blob.arrayBuffer())}
 async function loadReference(){
 const current=++generation,chosen=entries[Number(select.value)],text=chosen.text;
