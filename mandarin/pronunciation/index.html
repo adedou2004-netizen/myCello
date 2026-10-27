@@ -14,8 +14,9 @@ select{padding:9px;min-width:0;width:100%;font:inherit;border:1px solid #cbd5e1;
 button{min-height:44px;border:1px solid #b8c9dc;background:white;color:#172b46;border-radius:11px;padding:9px 11px;font-size:15px;font-weight:650}
 button.primary{background:#1668d5;border-color:#1668d5;color:white}button.recording{background:#b91c1c;border-color:#b91c1c;color:white}
 button:disabled{opacity:.48}
-canvas{display:block;flex:1;min-width:0;width:100%;height:62px;border:1px solid #e5ebf1;border-radius:10px;background:#f4f8fc}
-#pitch{width:100%;height:170px;margin-top:8px}
+canvas{display:block;width:100%;border:1px solid #e5ebf1;border-radius:10px;background:#f4f8fc}
+#compare{height:220px;margin-top:8px}
+#pitch{height:240px;margin-top:8px}
 .small{font-size:12px;color:#667085;line-height:1.45;min-height:18px}
 h1{font-size:18px;margin:2px 0}.heading{font-size:14px;font-weight:750;margin:0 0 4px}
 .legend{font-size:12px;color:#526071}
@@ -26,12 +27,15 @@ h1{font-size:18px;margin:2px 0}.heading{font-size:14px;font-weight:750;margin:0 
 <div class="picker"><label for="word">Vocabulary</label><select id="word" aria-label="Choose vocabulary"></select></div>
 <div id="glyph" class="word" lang="zh">书</div><div id="pinyin" class="py">shū</div><div id="meaning" class="meaning">book</div>
 <div class="heading">Dictionary pronunciation</div>
-<div class="soundRow"><button id="playRef" class="primary" disabled>▶ Hear it</button><canvas id="refWave" aria-label="Dictionary recording waveform"></canvas></div>
+<div class="soundRow"><button id="playRef" class="primary" disabled>▶ Hear it</button></div>
 <div id="refStatus" class="small" role="status">Loading saved dictionary audio…</div>
 <div class="heading" style="margin-top:14px">Your pronunciation</div>
-<div class="soundRow"><button id="record">● Record</button><button id="playMine" disabled>▶ Mine</button><canvas id="mineWave" aria-label="Your microphone waveform"></canvas></div>
+<div class="soundRow"><button id="record">● Record</button><button id="playMine" disabled>▶ Mine</button></div>
 <div id="mineStatus" class="small" role="status">Record a short example; it stays only in this browser tab.</div>
-<div class="small" style="margin-top:8px">The thin bars are loudness. The curve below is the tone you can see.</div>
+<div class="heading" style="margin-top:14px">Both sounds, same start and finish</div>
+<div class="legend"><span style="color:#15958c">Dictionary on top</span> · <span style="color:#266dda">Yours below</span></div>
+<canvas id="compare" aria-label="Both recordings aligned"></canvas>
+<div class="small">Both recordings are stretched to the same width, so you can compare one on top of the other.</div>
 <div class="heading" style="margin-top:14px">Tone shape</div>
 <div class="legend"><span style="color:#94a3b8">Expected</span> · <span style="color:#15958c">Dictionary</span> · <span style="color:#266dda">Yours</span></div>
 <canvas id="pitch" aria-label="Pitch contour comparison"></canvas>
@@ -62,7 +66,43 @@ const data=buffer.getChannelData(0),stride=Math.max(1,Math.ceil(data.length/w));
 for(let x=0;x<w;x++){let peak=0;const start=x*stride;for(let j=start;j<Math.min(data.length,start+stride);j++)peak=Math.max(peak,Math.abs(data[j]));const size=peak*h*.44;ctx.moveTo(x,h/2-size);ctx.lineTo(x,h/2+size)}
 ctx.stroke();
 }
-function render(){draw($("refWave"),reference,"#15958c");draw($("mineWave"),mine,"#266dda");drawPitch()}
+function render(){drawCompare();drawPitch()}
+function trim(buffer){
+  if(!buffer) return null;
+  const data=buffer.getChannelData(0);
+  let start=0, end=data.length-1;
+  while(start<end && Math.abs(data[start])<.012) start++;
+  while(end>start && Math.abs(data[end])<.012) end--;
+  return data.subarray(start, end+1);
+}
+function drawLane(ctx, data, x0, y, w, h, color){
+  ctx.strokeStyle="#d2dbe6"; ctx.beginPath(); ctx.moveTo(x0, y+h/2); ctx.lineTo(x0+w, y+h/2); ctx.stroke();
+  if(!data || !data.length) return;
+  const stride=Math.max(1, data.length/w);
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+  for(let x=0;x<w;x++){
+    let peak=0;
+    const from=Math.floor(x*stride), to=Math.min(data.length, Math.floor((x+1)*stride));
+    for(let j=from;j<to;j++) peak=Math.max(peak, Math.abs(data[j]));
+    const size=Math.min(h*.46, peak*h*.9);
+    ctx.moveTo(x0+x, y+h/2-size); ctx.lineTo(x0+x, y+h/2+size);
+  }
+  ctx.stroke();
+}
+function drawCompare(){
+  const canvas=$("compare");
+  const ratio=window.devicePixelRatio||1;
+  const w=canvas.width=Math.max(1, Math.round(canvas.clientWidth*ratio));
+  const h=canvas.height=Math.round(220*ratio);
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#f4f8fc"; ctx.fillRect(0,0,w,h);
+  const pad=8*ratio, lane=(h-pad*3)/2;
+  ctx.font=`${12*ratio}px system-ui`; ctx.fillStyle="#15958c"; ctx.fillText("Dictionary", 10*ratio, pad+14*ratio);
+  ctx.fillStyle="#266dda"; ctx.fillText("Yours", 10*ratio, pad*2+lane+14*ratio);
+  drawLane(ctx, trim(reference), 0, pad, w, lane, "#15958c");
+  drawLane(ctx, trim(mine), 0, pad*2+lane, w, lane, "#266dda");
+}
 function toneOf(py){
   if(/[āēīōūǖ]/.test(py)) return 1;
   if(/[áéíóúǘ]/.test(py)) return 2;
@@ -106,7 +146,7 @@ function drawPitch(){
   const canvas=$("pitch");
   const ratio=window.devicePixelRatio||1;
   const w=canvas.width=Math.max(1,Math.round(canvas.clientWidth*ratio));
-  const h=canvas.height=Math.round(170*ratio);
+  const h=canvas.height=Math.round(240*ratio);
   const ctx=canvas.getContext("2d");
   ctx.clearRect(0,0,w,h);
   ctx.strokeStyle="#e5ebf1";
