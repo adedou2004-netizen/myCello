@@ -235,7 +235,7 @@ function showHint(kind,e){
     box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b>${x.pinyin?`<div class="muted">${x.pinyin}</div>`:""}<div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
   }
   if(kind==="memoryAid") openMemoryAid(e);
-  if(kind==="myPalace") openPalace(e);
+  if(kind==="myPalace") openMemoryPalaceCard(e);
 }
 function currentEntry(){return study?entry(study):null}
 function renderToday(){
@@ -599,6 +599,45 @@ function renderPalaceLinks(e){
     if(other) openPalace(other);
   });
 }
+
+async function openMemoryPalaceCard(e){
+  activePalaceEntry=e.id;
+  await remotePalaceReady;
+  if(activePalaceEntry!==e.id) return;
+  let personal=palaceFor(e)||{};
+  if(!personal.url && !remotePalaceCards[e.simplified]?.url && !MEMORY_AIDS[e.simplified]){
+    await loadRemotePalace();
+    if(activePalaceEntry!==e.id) return;
+    personal=palaceFor(e)||{};
+  }
+  const shared=remotePalaceCards[e.simplified];
+  const asset=MEMORY_AIDS[e.simplified];
+  const source=personal.url||shared?.url;
+  if(!source && !asset){
+    if($("#palaceDlg").open) $("#palaceDlg").close();
+    openPalacePrompt(e);
+    return;
+  }
+  const title="Memory Palace · "+e.simplified;
+  $("#memoryAidTitle").textContent=title;
+  $("#memoryAidImg").classList.add("hidden");
+  $("#memoryAidImg").removeAttribute("src");
+  $("#memoryAidNote").textContent=personal.story||shared?.note||asset?.note||"";
+  $("#memoryAidStatus").textContent="Loading image…";
+  if($("#palaceDlg").open) $("#palaceDlg").close();
+  if(!$("#memoryAidDlg").open) $("#memoryAidDlg").showModal();
+  try{
+    const url=source||await loadMemoryAidImage(asset.file);
+    if(!$("#memoryAidDlg").open || $("#memoryAidTitle").textContent!==title) return;
+    $("#memoryAidImg").onerror=()=>{$("#memoryAidStatus").textContent="Could not load the saved image. Check your connection and try again.";};
+    $("#memoryAidImg").onload=()=>{$("#memoryAidStatus").textContent="";};
+    $("#memoryAidImg").src=url;
+    $("#memoryAidImg").classList.remove("hidden");
+  }catch(error){
+    if($("#memoryAidTitle").textContent===title) $("#memoryAidStatus").textContent="Could not load the saved image: "+error.message;
+  }
+}
+
 async function openPalace(e,offerPrompt=true){
   activePalaceEntry=e.id;
   await remotePalaceReady;
