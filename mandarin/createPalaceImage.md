@@ -50,7 +50,17 @@ Include the requested writing. Do not use wordless-image rules or negative promp
 Inspect the generated card for glyph, tone-mark, spelling and explanation accuracy; correct material errors before saving.
 
 ## 4. Save and register
-Use the established Supabase skill and supported Storage API. Upload the actual image bytes to mandarin-assets using a safe unique PNG filename. Never create only a database row or storage.objects metadata without uploading the bytes.
+Use the established Supabase skill and supported Storage API. Upload the actual image bytes to mandarin-assets.
+
+Use this required filename format: `english_translation_pinyin.png`.
+- Start with the English translation of the selected character or expression.
+- Add one underscore, then its pinyin without tone marks or tone numbers.
+- Use lowercase; replace spaces within each part with hyphens so the underscore clearly separates English from pinyin.
+- Strip tone diacritics; represent ü as v for an ASCII-safe filename.
+- Examples: 休 xiū (rest) → `rest_xiu.png`; 一 yī (one) → `one_yi.png`; 你好 nǐ hǎo (hello) → `hello_ni-hao.png`.
+- Use the selected meaning, not an entire semicolon-separated dictionary definition.
+- Reuse an existing matching object. For a genuinely different card with a filename collision, preserve this base and append a version suffix, e.g. `rest_xiu-v2.png`; do not overwrite without authorization.
+Never create only a database row or storage.objects metadata without uploading the bytes.
 
 Use authorized credentials or the established upload flow. Do not make the bucket public, grant broad anonymous writes, or bypass access controls. If upload access is unavailable, retain the image, report the missing access and do not claim it was saved.
 
