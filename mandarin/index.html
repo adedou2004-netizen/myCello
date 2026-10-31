@@ -89,7 +89,8 @@ dialog::backdrop{background:#0008}
 <button data-tab="quiz">Quiz</button>
 </nav>
 <dialog id="memoryAidDlg"><div class="dlghead"><strong id="memoryAidTitle">Memory Aid</strong><button id="memoryAidClose" type="button">Close</button></div><div class="dlgbody"><img id="memoryAidImg" alt="App-provided character memory aid" class="hidden"><p id="memoryAidNote"></p><p id="memoryAidStatus" class="muted"></p></div></dialog>
-<dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">My Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><p id="palaceIntro" class="muted"></p><label>My palace name</label><input id="palaceName" placeholder="My House"><label>Location in my palace</label><input id="palaceLocation" placeholder="Front door, kitchen, hallway…"><div id="palaceLinked"></div><img id="palaceImg" alt="My own image for this location" class="hidden"><p id="palaceNote"></p><label>My memory story</label><textarea id="palaceStory" placeholder="What happens at this location to help me remember the character?"></textarea><label>My image (optional)</label><input id="palaceFile" type="file" accept="image/*"><button id="palaceSave" class="primary" type="button">Save My Palace</button><p id="palaceStatus" class="muted"></p></div></dialog>
+<dialog id="palaceDlg"><div class="dlghead"><strong id="palaceTitle">My Memory Palace</strong><button id="palaceClose" type="button">Close</button></div><div class="dlgbody"><p id="palaceIntro" class="muted"></p><label>My Memory Palace name</label><input id="palaceName" placeholder="My House"><label>Location in my Memory Palace</label><input id="palaceLocation" placeholder="Front door, kitchen, hallway…"><div id="palaceLinked"></div><img id="palaceImg" alt="My own image for this location" class="hidden"><p id="palaceNote"></p><button id="palaceGenerate" class="hidden" type="button">Create a Memory Palace card with ChatGPT</button><label>My memory story</label><textarea id="palaceStory" placeholder="What happens at this location to help me remember the character?"></textarea><label>My image (optional)</label><input id="palaceFile" type="file" accept="image/*"><button id="palaceSave" class="primary" type="button">Save My Memory Palace</button><p id="palaceStatus" class="muted"></p></div></dialog>
+<dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a Memory Palace card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
@@ -224,7 +225,7 @@ async function speak(text){
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Memory Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind,e){
   if(!e) return;
@@ -538,6 +539,38 @@ function openMemoryAid(e){
   });
 }
 $("#memoryAidClose").onclick=()=>$("#memoryAidDlg").close();
+
+const PALACE_IMAGE_SKILL="---\nname: mandarin-character-image-prompt\ndescription: Analyzes a Mandarin Chinese character or word (etymology, radicals, components, or an invented visual mnemonic) and writes a ready-to-use text-to-image prompt for a flashcard or matching-game illustration. Use this whenever the user asks for an image, picture, illustration, visual cue, mnemonic art, or image prompt for a Chinese character, hanzi, or vocabulary word, for a batch of characters, or for a Mandarin learning app, even if they don't mention radicals, FLUX, or Midjourney.\n---\n\n# Mandarin Character Image Prompt Generator\n\n## Goal\nFor any Mandarin character, produce (1) a short, accurate analysis of how the character is built and (2) an image prompt that yields a wordless illustration a learner can read at a glance and remember.\n\nTwo things matter most: the picture must carry the meaning without any writing, and the explanation of the character must be true. A vivid mnemonic that teaches false etymology is worse than a plain one.\n\n---\n\n## 1. Inputs\n\nAccept a single character, a word, or a list. Note these if given, otherwise use the defaults:\n\n| Input | Default |\n| :--- | :--- |\n| Reading / meaning to illustrate (for polyphonic characters like 行, 长, 了) | Most common reading. If ambiguous, ask once, or give one prompt per reading. |\n| Simplified or Traditional | Simplified. Mention the traditional form when it makes the structure clearer (讀 shows 言 + 賣; 读 hides it). |\n| Art style | Clean vector storybook illustration, warm light, bold outlines. |\n| Audience | General learners. If the user names an age group, adjust tone and content. |\n| Target model | Model-agnostic. Output a positive prompt plus a separate negative prompt. |\n\n**Multi-character words** (e.g. 所有, 电脑): treat each character separately for analysis, then illustrate the word's meaning as one scene. Don't force one picture per character.\n\n---\n\n## 2. Analysis Workflow\n\nDo these four steps before writing the scene.\n\n1. **Etymology.** Is it a pictograph (日, 山, 木), a compound ideograph (休, 明), or a phono-semantic compound (the large majority of characters)? Has the modern form drifted so far that the original picture is gone?\n2. **Components.** Identify the semantic part (意符), which gives the category, and the phonetic part (声符), which hints at sound. Name the layout (left-right, top-bottom, enclosure).\n3. **Reliability check.** Decide whether the story you are about to tell is:\n   - **Etymological:** supported by standard references (Shuowen, Wiktionary, Outlier Linguistics, 汉典).\n   - **Mnemonic only:** an invented story that helps recall but isn't the real origin.\n   Label which one it is. Never present a mnemonic as etymology. If unsure of the etymology, say so and fall back to a mnemonic.\n4. **Meaning first.** Ask what single image makes a learner answer correctly in the game. Components that are only phonetic (e.g. 包 in 跑) usually should not appear in the picture, because they add clutter and no meaning.\n\n---\n\n## 3. Strategy Selection\n\nPick **one** primary strategy.\n\n| Strategy | Use when | Examples | Visual approach |\n| :--- | :--- | :--- | :--- |\n| **1. Pictograph** | The character began as a drawing of a thing | 日, 月, 山, 木, 火, 门 | The object in a natural scene whose shape echoes the character's structure. A subtle morph from object to strokes is fine as long as no readable glyph appears. |\n| **2. Component story** | Two meaning parts combine | 休 (人 + 木), 明 (日 + 月), 看 (手 over 目), 好 (女 + 子) | One scene where both elements interact clearly. |\n| **3. Semantic radical + context** | Phono-semantic compound with a useful category radical | 猫 (犭), 河 (氵), 妈 (女), 吃 (口) | The radical's category is the hero (an animal, water, a person, a mouth) acting out the meaning. Ignore the phonetic part. |\n| **4. Abstract mnemonic** | No usable etymology (many simplified forms, e.g. 卖, 买, 对) | 卖, 买 | A memory-palace scene that acts out the meaning. Label it \"mnemonic only\". |\n| **5. Concept / function word** | Abstract meaning, grammar particle, measure word, adjective, or relation | 大, 小, 的, 了, 和, 比, 个 | A contrast or minimal scene: big next to small, two things joined by a ribbon (和), one taller than another (比). For pure particles, illustrate the *function* in a simple situation, and say in Section B that the image is approximate. |\n\n---\n\n## 4. Image Prompt Rules\n\n### Composition (it has to work as a small tile)\n1. **One focal subject, centered**, filling roughly 60 to 70% of a square frame.\n2. **Three main elements at most.** Every extra object competes with the meaning.\n3. **Readable at about 128 px.** High contrast, bold silhouettes, no fine detail that disappears when shrunk.\n4. **Plain background.** A soft solid or simple gradient, with at most one environmental cue (a tree trunk, a horizon line).\n5. **Consistent style across a set.** In batch mode, reuse the exact same style sentence and palette in every prompt (see Batch Mode).\n\n### Text exclusion (the most common failure)\nImage models draw fake writing on anything that normally carries it. **Avoid text-bearing objects entirely**:\n- Avoid: books with visible pages, signs, banners, scrolls, price tags, menus, labels, posters, screens, clocks with numerals, calendars, packaging, uniforms with logos.\n- If the meaning requires one (reading, writing, shop), use a version without readable surfaces: a book seen from the back or closed, a book whose open pages show only pictures, a market stall displaying fruit with no tags, a pencil drawing a picture rather than a word.\n- Describe the scene **positively** (\"a wordless, purely pictorial illustration\"). Mentioning \"text\" or \"letters\" in the main prompt can make some models draw them.\n- Put exclusions in the **separate negative prompt**, not inside the main prompt.\n\n### Content and cultural care\n- Depict everyday, contemporary or timeless settings. Avoid stock clichés (red lanterns, dragons, pagodas) unless the character actually calls for them.\n- Keep people diverse and non-stereotyped; prefer animals or simple characters when a person isn't needed.\n- No scary, violent, or suggestive imagery. For characters like 死, 杀, 打, 怕, show the concept gently (a fallen leaf, a startled bunny) rather than literally.\n\n---\n\n## 5. Game-Specific Checks\n\nRun these before finalizing. They are what make an image work in a matching game, not just look nice.\n\n1. **Confusability.** Would a learner mistake this picture for a different character they're studying? Known traps: 日/月/目, 大/太/犬, 人/入/八, 木/本/末, 左/右, 买/卖, 上/下. If the target has a close sibling, make the distinguishing feature (direction, position, size) the most visible thing in the image.\n2. **Unambiguous mapping.** One picture, one meaning. A sun image for 明 will read as 日 (sun), so for 明 the sun and moon must appear together and equally.\n3. **Part of speech.** For verbs, show the action mid-motion with a clear actor. For adjectives, show a contrast pair or an unmistakable example. For nouns, show the object alone.\n4. **Distractor safety.** The image shouldn't give away or clash with the wrong answers likely to sit next to it.\n\n---\n\n## 6. Output Schema\n\nUse these sections for every character. In batch mode, repeat per character and keep each tight.\n\n### A. Character Overview\n- **Character:** (with traditional form in brackets if different)\n- **Pinyin:** with tone marks\n- **Core meaning:** primary English gloss (and the reading being illustrated if polyphonic)\n- **Structure:** radical(s), layout, and which part is semantic vs phonetic\n\n### B. Strategy and Reasoning\n- Strategy number and name, in one or two sentences on why it fits.\n- **Basis:** `Etymological` or `Mnemonic only`, plus a confidence note if you're unsure of the origin.\n- **Confusable with:** characters to watch for in a game set, if any.\n\n### C. Scene Metaphor\nTwo or three sentences. Say what is in the picture and how each element maps to the meaning, the radical, or the mnemonic.\n\n### D. Image Generation Prompt\n- **Prompt:** one paragraph, copy-ready, positive phrasing only, ending with the style sentence.\n- **Negative prompt:** a separate line, for models that support one.\n  Default: `text, letters, words, writing, Chinese characters, pinyin, captions, signs, labels, numbers, watermark, logo, blurry, cluttered background`\n- **Midjourney form (optional):** the prompt followed by `--no text, letters, words, writing, signs, labels --ar 1:1`\n- **Alt text:** one short sentence for accessibility and the app's content database.\n\n---\n\n## 7. Batch Mode\n\nWhen given several characters:\n1. Define one **style anchor** at the top (for example: \"flat vector storybook illustration, warm soft lighting, thick rounded outlines, limited pastel palette, plain cream background\") and paste it unchanged into every prompt.\n2. Scan the list for confusable pairs and treat them together.\n3. Keep Sections A to D, but compress B and C to one line each.\n4. Offer a table at the end: character, pinyin, meaning, basis (etymological or mnemonic), prompt.\n\n---\n\n## 8. Example\n\n### Input\n`Character: 读`\n\n### Output\n\n#### A. Character Overview\n- **Character:** 读 (traditional 讀)\n- **Pinyin:** dú\n- **Core meaning:** to read; to study\n- **Structure:** Left-right. 讠 (speech) on the left is the semantic part. 卖 on the right is a phonetic component (in 讀 it is 賣). The sound link is loose today.\n\n#### B. Strategy and Reasoning\n- **Strategy 3, Radical focus.** The speech radical carries the meaning, and reading aloud is the natural everyday act. The right-hand part is phonetic, so it stays out of the picture.\n- **Basis:** Etymological for the 讠 meaning; the owl scene is a mnemonic.\n- **Confusable with:** 说 (shuō, to speak) since both have 讠. The picture should emphasize following a page, not just talking.\n\n#### C. Scene Metaphor\nA small owl in round glasses sits on a stool holding an open picture book, tracing along it with one wing tip. Soft sound waves and musical notes drift from its beak (speech, 讠), and the book's pages show only tiny drawings, so the book reads as reading without any writing.\n\n#### D. Image Generation Prompt\n- **Prompt:** A flat vector storybook illustration of a small wise owl wearing round glasses, perched on a wooden stool and reading aloud from a large open picture book whose pages show only small colorful drawings of a moon and a tree. Soft glowing sound waves and musical notes float from the owl's beak. The owl is centered and fills most of the square frame. Warm soft lighting, thick rounded outlines, limited pastel palette, plain cream background, wordless purely pictorial illustration.\n- **Negative prompt:** `text, letters, words, writing, Chinese characters, pinyin, captions, signs, labels, numbers, watermark, logo, blurry, cluttered background`\n- **Midjourney form:** the prompt above `--no text, letters, words, writing, signs, labels --ar 1:1`\n- **Alt text:** An owl in glasses reading aloud from a picture book, with sound waves coming from its beak.\n\n---\n\n## 9. Pre-Send Checklist\n- [ ] Etymology claims are either sourced or labeled \"mnemonic only\"\n- [ ] The phonetic component is not drawn unless it also carries meaning\n- [ ] No object in the scene normally carries writing\n- [ ] Main prompt has no mention of text, and the negative prompt is separate\n- [ ] One focal subject, three elements or fewer, plain background\n- [ ] Image is not confusable with a likely neighbor in the game set\n- [ ] Style sentence matches the rest of the batch\n";
+const remotePalaceCards={};
+let remotePalaceReady=Promise.resolve();
+function palaceCardSource(e){
+  const p=palaceFor(e)||{};
+  return p.url||p.storagePath||remotePalaceCards[e.simplified]?.url||MEMORY_AIDS[e.simplified]?.file||"";
+}
+function palaceImagePrompt(e){
+  return "Word: "+e.simplified+"\nPinyin: "+(e.pinyin||"Please verify")+"\nMeaning: "+(e.meaning||"Please verify")+"\n\n"+
+    "Create one Memory Palace learning card for this word. IMPORTANT: include a VERY LARGE Mandarin character, official pinyin with tone marks, meaning, and a clear component explanation with large Mandarin component characters and their pinyin/meanings (for example: 人 rén → 亻, person + 木 mù, tree/wood = 休 xiū, to rest). Distinguish real origins from invented mnemonics. This explicit request OVERRIDES every wordless/no-writing instruction in the SkillMD below. Generate the image, not only a prompt.\n\n"+
+    PALACE_IMAGE_SKILL+"\n\nFINAL CARD REQUIREMENT: Include the large character, pinyin, meaning and component explanation. Do not make a wordless card.";
+}
+function openPalacePrompt(e){
+  $("#palacePromptWord").textContent=e.simplified;
+  $("#palacePromptText").value=palaceImagePrompt(e);
+  $("#palacePromptStatus").textContent="";
+  if(!$("#palacePromptDlg").open) $("#palacePromptDlg").showModal();
+}
+$("#palacePromptClose").onclick=()=>$("#palacePromptDlg").close();
+$("#palacePromptCopy").onclick=async()=>{
+  const field=$("#palacePromptText");
+  try{
+    await navigator.clipboard.writeText(field.value);
+    $("#palacePromptStatus").textContent="Copied. Paste this into ChatGPT.";
+  }catch(error){
+    field.focus();field.select();field.setSelectionRange(0,field.value.length);
+    $("#palacePromptStatus").textContent="Press and hold the selected text to copy, or use Ctrl+C.";
+  }
+};
+$("#palaceGenerate").onclick=()=>{const e=entry(activePalaceEntry);if(e)openPalacePrompt(e)};
+
 let activePalaceEntry=null;
 function linkedPalaceEntries(name){
   const target=name.trim().toLowerCase();
@@ -548,7 +581,7 @@ function renderPalaceLinks(e){
   const name=$("#palaceName").value.trim();
   const others=linkedPalaceEntries(name).filter(item=>item.id!==e.id);
   $("#palaceLinked").innerHTML=name&&others.length
-    ?'<p class="muted">Other characters in this palace:</p>'+others.map(item=>
+    ?'<p class="muted">Other characters in this Memory Palace:</p>'+others.map(item=>
       '<button type="button" data-palace-entry="'+item.id+'">'+item.simplified+' — '+(db.palace[item.id]?.location||"Location not set")+'</button>'
     ).join(" ")
     :"";
@@ -557,14 +590,16 @@ function renderPalaceLinks(e){
     if(other) openPalace(other);
   });
 }
-function openPalace(e){
+async function openPalace(e,offerPrompt=true){
   activePalaceEntry=e.id;
+  await remotePalaceReady;
+  if(activePalaceEntry!==e.id) return;
   const p=palaceFor(e)||{};
-  $("#palaceTitle").textContent="My Palace · "+e.simplified;
+  $("#palaceTitle").textContent="My Memory Palace · "+e.simplified;
   const hasPersonalMemory=!!(p.palaceName||p.location||p.story||p.url);
   $("#palaceIntro").textContent=hasPersonalMemory
-    ?"Your personal memory location for this character. You can connect other characters by using the same palace name."
-    :"Create My First Palace: give your palace a name, choose a location for this character, and optionally add your own picture.";
+    ?"Your personal memory location for this character. You can connect other characters by using the same Memory Palace name."
+    :"Create My First Memory Palace: give your Memory Palace a name, choose a location for this character, and optionally add your own picture.";
   $("#palaceName").value=p.palaceName||"";
   $("#palaceLocation").value=p.location||"";
   $("#palaceImg").classList.toggle("hidden",!p.url);
@@ -573,9 +608,12 @@ function openPalace(e){
   $("#palaceStory").value=p.story||"";
   $("#palaceFile").value="";
   $("#palaceStatus").textContent="";
-  $("#palaceSave").textContent=hasPersonalMemory?"Save My Palace":"Create My First Palace";
+  $("#palaceSave").textContent=hasPersonalMemory?"Save My Memory Palace":"Create My First Memory Palace";
   renderPalaceLinks(e);
+  const missing=!palaceCardSource(e);
+  $("#palaceGenerate").classList.toggle("hidden",!missing);
   if(!$("#palaceDlg").open) $("#palaceDlg").showModal();
+  if(missing&&offerPrompt) openPalacePrompt(e);
 }
 $("#palaceName").oninput=()=>{
   const e=entry(activePalaceEntry);
@@ -587,7 +625,7 @@ $("#palaceSave").onclick=async()=>{
   if(!e) return;
   const name=$("#palaceName").value.trim(),location=$("#palaceLocation").value.trim();
   if(!name||!location){
-    $("#palaceStatus").textContent="Give your palace a name and this character a location.";
+    $("#palaceStatus").textContent="Give your Memory Palace a name and this character a location.";
     return;
   }
   const p=palaceFor(e)||{};
@@ -611,7 +649,7 @@ $("#palaceSave").onclick=async()=>{
   db.palace[e.id]={...p,palaceName:name,location,story,url,storagePath:url};
   save();
   $("#palaceStatus").textContent="Saved in this browser. Your character is linked to "+name+" at "+location+".";
-  openPalace(e);
+  await openPalace(e,false);
   $("#palaceStatus").textContent="Saved in this browser. Your character is linked to "+name+" at "+location+".";
 };
 async function loadRemotePalace(){
@@ -619,6 +657,7 @@ async function loadRemotePalace(){
     const r=await fetch(SUPABASE_URL+"/rest/v1/memory_palace_cards?select=subject_text,storage_path,title,note",{headers:{apikey:SUPABASE_KEY}});
     if(!r.ok) return;
     const rows=await r.json();
+    rows.forEach(row=>{const path=row.storage_path||""; if(path) remotePalaceCards[row.subject_text]={url:path.startsWith("http")?path:BUCKET+path};});
     rows.forEach(row=>{const e=byText(row.subject_text); if(!e) return; const path=row.storage_path||""; db.palace[e.id]=db.palace[e.id]||{url:path.startsWith("http")?path:BUCKET+path,story:row.note||"",storagePath:path}});
     save(); if(tab==="today") renderToday();
   }catch(e){}
@@ -627,7 +666,7 @@ function select(which){
   stopSpeechListening();
   tab=which;
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===which)));
-  const titles={today:["Today","Due cards with Memory Aid, My Palace and examples."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
+  const titles={today:["Today","Due cards with Memory Aid, My Memory Palace and examples."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
   $("#title").textContent=titles[which][0]; $("#subtitle").textContent=titles[which][1];
   if(which!=="capture") stopPreview();
   if(which==="today") renderToday();
@@ -637,7 +676,7 @@ function select(which){
   if(which==="quiz") renderQuiz();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
-select("today"); loadRemotePalace();
+select("today"); remotePalaceReady=loadRemotePalace();
 </script>
 </body>
 </html>
