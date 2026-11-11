@@ -88,7 +88,7 @@ dialog::backdrop{background:#0008}
 <button data-tab="library">Library</button>
 <button data-tab="quiz">Quiz</button>
 </nav>
-<dialog id="backupDlg" aria-labelledby="backupTitle"><div class="dlghead"><strong id="backupTitle">Backup &amp; Restore</strong><button id="backupClose" type="button">Close</button></div><div class="dlgbody">
+<input id="personalCardFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><dialog id="backupDlg" aria-labelledby="backupTitle"><div class="dlghead"><strong id="backupTitle">Backup &amp; Restore</strong><button id="backupClose" type="button">Close</button></div><div class="dlgbody">
 <p class="muted">Save a copy of your Mandarin vocabulary, lessons, progress and local images. The backup stays on your device.</p>
 <button id="backupExport" type="button" class="primary">Download backup ZIP</button>
 <label for="backupImport">Restore from another phone or computer</label>
@@ -237,7 +237,7 @@ async function speak(text){
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Memory Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Memory Palace</button><button data-act="uploadPalace">Upload card</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind,e){
   if(!e) return;
@@ -512,6 +512,7 @@ function bindCard(){
     if(act==="compare") location.href="./pronunciation/?word="+encodeURIComponent(e.simplified);
     if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
     if(act==="examples"||act==="memoryAid"||act==="myPalace") showHint(act,e);
+    if(act==="uploadPalace"){personalCardEntry=e.id;$("#personalCardFile").click()}
     if(act==="again"||act==="good"){grade(e.id,act==="good"); reviewOrder=reviewOrder.filter(id=>id!==e.id); study=null; renderToday()}
     if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
   });
@@ -591,22 +592,42 @@ $("#palacePromptCopy").onclick=async()=>{
   }
 };
 
-let activePalaceEntry=null;
+let activePalaceEntry=null,personalCardEntry=null,personalCardObjectUrl=null;
+$("#personalCardFile").onchange=async event=>{
+ const file=event.target.files[0],id=personalCardEntry;event.target.value="";
+ if(!file||!id)return;
+ const e=entry(id);if(!e)return;
+ const assetId="personal-"+id.replace(/[^a-zA-Z0-9-]/g,"-").toLowerCase();
+ try{
+  await MandarinBackup.storePersonalImage(assetId,file);
+  db.palace[id]={...(db.palace[id]||{}),assetId};
+  save();await openMemoryPalaceCard(e);
+ }catch(error){alert("Could not save picture locally: "+error.message)}
+};
+$("#memoryAidDlg").addEventListener("close",()=>{
+ if(personalCardObjectUrl){URL.revokeObjectURL(personalCardObjectUrl);personalCardObjectUrl=null}
+});
 async function openMemoryPalaceCard(e){
   activePalaceEntry=e.id;
   await remotePalaceReady;
   if(activePalaceEntry!==e.id) return;
   let personal=palaceFor(e)||{};
-  if(!personal.url && !remotePalaceCards[e.simplified]?.url && !MEMORY_AIDS[e.simplified]){
+  if(!personal.url && !personal.assetId && !remotePalaceCards[e.simplified]?.url && !MEMORY_AIDS[e.simplified]){
     await loadRemotePalace();
     if(activePalaceEntry!==e.id) return;
     personal=palaceFor(e)||{};
   }
   const shared=remotePalaceCards[e.simplified];
   const asset=MEMORY_AIDS[e.simplified];
-  const source=personal.url||shared?.url;
+  let source=personal.url||shared?.url;
+  if(personal.assetId){
+    try{
+      const blob=await MandarinBackup.loadPersonalImage(personal.assetId);
+      if(blob){if(personalCardObjectUrl)URL.revokeObjectURL(personalCardObjectUrl);personalCardObjectUrl=URL.createObjectURL(blob);source=personalCardObjectUrl;}
+    }catch(error){console.warn("Personal card unavailable",error)}
+  }
   if(!source && !asset){
-    openPalacePrompt(e);
+    if(confirm("No Memory Card yet. Upload your own picture now? Press Cancel to copy a ChatGPT prompt.")){personalCardEntry=e.id;$("#personalCardFile").click()}else openPalacePrompt(e);
     return;
   }
   const title="Memory Palace · "+e.simplified;
