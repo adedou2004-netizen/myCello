@@ -185,5 +185,21 @@ async function restoreBackup(preview,mode){
  }
  return {keys:next.size,assets:preview.assets.length};
 }
-global.MandarinBackup={exportBackup,inspectBackup,restoreBackup,keys:KEYS};
+
+async function storePersonalImage(id,file){
+ if(!id||!/^personal-[a-z0-9-]{1,100}$/.test(id))throw Error("Invalid image ID.");
+ if(!file||!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>10*1024*1024)throw Error("Please choose a PNG, JPEG, WEBP or GIF under 10 MB.");
+ await writeAssets([[id,file]],false);
+ return id;
+}
+async function loadPersonalImage(id){
+ const db=await openAssets();if(!db)return null;
+ try{return await new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,"readonly"),q=tx.objectStore(STORE).get(id);
+  q.onsuccess=()=>resolve(q.result instanceof Blob?q.result:q.result?.blob||null);
+  q.onerror=()=>reject(q.error);
+ })}finally{db.close()}
+}
+
+global.MandarinBackup={exportBackup,inspectBackup,restoreBackup,storePersonalImage,loadPersonalImage,keys:KEYS};
 })(window);
