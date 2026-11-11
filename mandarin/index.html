@@ -79,7 +79,7 @@ dialog::backdrop{background:#0008}
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Keep the streak. One character at a time.</div><div class="sessionbar"><span id="sessionFill" style="width:0%"></span></div></header>
+<header><button id="backupOpen" type="button" aria-label="Backup and Restore" style="float:right;min-height:36px;padding:6px 10px;font-size:12px">Backup</button><h1 id="title">Today</h1><div class="sub" id="subtitle">Keep the streak. One character at a time.</div><div class="sessionbar"><span id="sessionFill" style="width:0%"></span></div></header>
 <main id="app"></main>
 <nav>
 <button data-tab="today" aria-selected="true">Today</button>
@@ -88,8 +88,21 @@ dialog::backdrop{background:#0008}
 <button data-tab="library">Library</button>
 <button data-tab="quiz">Quiz</button>
 </nav>
+<dialog id="backupDlg" aria-labelledby="backupTitle"><div class="dlghead"><strong id="backupTitle">Backup &amp; Restore</strong><button id="backupClose" type="button">Close</button></div><div class="dlgbody">
+<p class="muted">Save a copy of your Mandarin vocabulary, lessons, progress and local images. The backup stays on your device.</p>
+<button id="backupExport" type="button" class="primary">Download backup ZIP</button>
+<label for="backupImport">Restore from another phone or computer</label>
+<input id="backupImport" type="file" accept=".zip,application/zip">
+<div id="backupPreview" class="hidden" style="border:2px solid #E5E5E5;border-radius:14px;padding:12px;margin-top:12px">
+<strong>Backup preview</strong><p id="backupSummary" class="muted"></p>
+<label for="backupMode">How should existing data be handled?</label><select id="backupMode"><option value="merge">Merge — keep my current progress and add missing entries</option><option value="replace">Replace — use backup data for included sections</option></select>
+<p class="muted">Replacing changes your local data. Merging keeps existing progress when there is a conflict. Review before restoring.</p>
+<button id="backupRestore" type="button" class="primary">Restore selected backup</button></div>
+<p id="backupStatus" role="status" aria-live="polite" class="muted"></p>
+</div></dialog>
 <dialog id="memoryAidDlg"><div class="dlghead"><strong id="memoryAidTitle">Memory Aid</strong><button id="memoryAidClose" type="button">Close</button></div><div class="dlgbody"><img id="memoryAidImg" alt="App-provided character memory aid" class="hidden"><p id="memoryAidNote"></p><p id="memoryAidStatus" class="muted"></p></div></dialog>
 <dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a Memory Palace card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
+<script src="./backup.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
@@ -639,6 +652,37 @@ function select(which){
   if(which==="quiz") renderQuiz();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
+
+/* Backup & Restore is intentionally local and never calls Supabase. */
+let backupPreview=null;
+$("#backupOpen").onclick=()=>$("#backupDlg").showModal();
+$("#backupClose").onclick=()=>$("#backupDlg").close();
+$("#backupExport").onclick=async()=>{
+ const b=$("#backupExport");b.disabled=true;$("#backupStatus").textContent="Preparing your ZIP...";
+ try{const x=await MandarinBackup.exportBackup();$("#backupStatus").textContent="Backup downloaded: "+x.keys+" data sections and "+x.assets+" personal image(s)."}
+ catch(e){$("#backupStatus").textContent="Backup could not be created: "+e.message}
+ finally{b.disabled=false}
+};
+$("#backupImport").onchange=async(event)=>{
+ backupPreview=null;$("#backupPreview").classList.add("hidden");
+ const file=event.target.files[0];if(!file)return;
+ $("#backupStatus").textContent="Checking the selected backup...";
+ try{
+  backupPreview=await MandarinBackup.inspectBackup(file);
+  const x=backupPreview;
+  $("#backupSummary").textContent="Created "+new Date(x.manifest.created_at).toLocaleString()+". "+x.keys.length+" saved data sections, "+x.assets.length+" personal images. "+x.overlaps.length+" section(s) already exist here; "+x.newKeys.length+" are new.";
+  $("#backupPreview").classList.remove("hidden");$("#backupStatus").textContent="Review the details and choose Merge or Replace.";
+ }catch(e){$("#backupStatus").textContent="Backup cannot be imported: "+e.message}
+};
+$("#backupRestore").onclick=async()=>{
+ if(!backupPreview)return;
+ const mode=$("#backupMode").value;
+ if(!confirm(mode==="replace"?"Replace included local Mandarin data with this backup? This can overwrite your existing progress.":"Merge imported data with your local Mandarin collection? Existing progress will take priority."))return;
+ const b=$("#backupRestore");b.disabled=true;$("#backupStatus").textContent="Restoring...";
+ try{const x=await MandarinBackup.restoreBackup(backupPreview,mode);$("#backupStatus").textContent="Restored "+x.keys+" sections and "+x.assets+" images. Reloading the app...";setTimeout(()=>location.reload(),850)}
+ catch(e){$("#backupStatus").textContent=e.message;b.disabled=false}
+};
+
 select("today"); remotePalaceReady=loadRemotePalace();
 </script>
 </body>
