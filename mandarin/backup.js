@@ -11,7 +11,7 @@ const U=n=>new Uint8Array(n);
 const u16=(a,i,n)=>{a[i]=n&255;a[i+1]=(n>>>8)&255};
 const u32=(a,i,n)=>{u16(a,i,n);u16(a,i+2,n>>>16)};
 const r16=(a,i)=>a[i]|(a[i+1]<<8);
-const r32=(a,i)=>(a[i]|a[i+1]<<8|a[i+2]<<16|a[i+3]<<24))>>>0;
+const r32=(a,i)=>(a[i]|a[i+1]<<8|a[i+2]<<16|a[i+3]<<24)>>>0;
 const crcTable=Array.from({length:256},(_,n)=>{for(let j=0;j<8;j++)n=(n&1)?0xedb88320^(n>>>1):n>>>1;return n>>>0});
 function crc32(bytes){let c=0xffffffff;for(const b of bytes)c=crcTable[(c^b)&255]^(c>>>8);return (c^0xffffffff)>>>0}
 function concat(chunks){const total=chunks.reduce((n,c)=>n+c.length,0);if(total>LIMIT)throw Error("Backup exceeds 150 MB limit.");const a=U(total);let p=0;for(const c of chunks){a.set(c,p);p+=c.length}return a}
