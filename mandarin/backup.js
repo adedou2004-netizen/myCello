@@ -95,7 +95,7 @@ function mergeKey(key,current,incoming){
  let a,b;try{a=JSON.parse(current);b=JSON.parse(incoming)}catch(_){return current}
  if(key==="mandarinAppV2"){
   if(!a||!b||!Array.isArray(a.entries)||!Array.isArray(b.entries))return current;
-  const result=structuredClone(a),ids=new Map(),existing=new Set(result.entries.map(x=>x.simplified+"|"+(x.pinyin||"")));
+  const result=JSON.parse(JSON.stringify(a)),ids=new Map(),existing=new Set(result.entries.map(x=>x.simplified+"|"+(x.pinyin||"")));
   for(const ent of b.entries){if(!ent||typeof ent.simplified!=="string")continue;
    const match=result.entries.find(x=>x.simplified===ent.simplified&&(x.pinyin||"")===(ent.pinyin||""));
    if(match){ids.set(ent.id,match.id);continue}
