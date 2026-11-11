@@ -1,5 +1,5 @@
 # Mandarin to Go — Local-first implementation plan
-Status: **in progress (planning / audit)** · Branch: `feature/mandarin-to-go-local-first`
+Status: **backup feature implemented on development branch; browser acceptance pending** · Branch: `feature/mandarin-to-go-local-first`
 
 ## Product decisions (approved 2026-11-11)
 - **Keep learner activity local by default.** No per-answer calls to Supabase for SRS, quiz history, or palace placements. Preserve existing browser data during upgrades where possible; exporting it is more important than cloud sync.
@@ -26,13 +26,13 @@ Status: **in progress (planning / audit)** · Branch: `feature/mandarin-to-go-lo
 - [ ] Establish smoke checks for character quiz, expressions, lessons, camera, speech, radicals, and palace viewer.
 - [ ] Document current duplicate detection and how local entries map to official dictionary records.
 
-### P1 — Portable backup and restore (first user-facing feature)
-- [ ] Implement a **versioned** portable ZIP bundle with manifest and JSON for settings, vocabulary, lessons, SRS, reviews, and palace placements; include personal images/assets as binary files.
-- [ ] Do not export auth credentials, Stripe information, secrets, webcam recordings, or other unrelated browser keys.
-- [ ] Back up **all Mandarin-related legacy storage keys** until the app migrates to a single storage model. Validate their values before importing.
-- [ ] Add user-visible **Export backup**, **Import backup**, preview, and explicit **Merge / Replace** choices. Never silently overwrite data. Define per-record stable IDs and merge conflicts.
-- [ ] Test round trip with existing/empty browser, duplicate imports, corrupted ZIP, large image, cancelled restore, and phone-to-PC.
-- [ ] For large files consider IndexedDB for personal art; `localStorage` is not suitable for image binaries.
+### P1 — Portable backup and restore (implemented; manual browser acceptance pending)
+- [x] Implement a **versioned** portable ZIP bundle with manifest and JSON for settings, vocabulary, lessons, SRS, reviews, and palace placements; include personal images/assets as binary files.
+- [x] Do not export auth credentials, Stripe information, secrets, webcam recordings, or other unrelated browser keys.
+- [x] Back up **documented Mandarin-related legacy storage keys** until the app migrates to a single storage model. Validate their values before importing.
+- [x] Add user-visible **Export backup**, **Import backup**, preview, and explicit **Merge / Replace** choices. Never silently overwrite data. Define per-record stable IDs and merge conflicts.
+- [ ] Complete real-device round trip (automated simulated ZIP, merge, corruption and image restore tests passed) with existing/empty browser, duplicate imports, corrupted ZIP, large image, cancelled restore, and phone-to-PC.
+- [x] Use IndexedDB for uploaded personal cards; `localStorage` is not suitable for image binaries.
 
 ### P2 — Unified local data and learning
 - [ ] Specify client-side canonical entry/lesson/review data models and adapters for existing browser keys.
@@ -85,3 +85,10 @@ Status: **in progress (planning / audit)** · Branch: `feature/mandarin-to-go-lo
 
 ## Immediate next task
 Implement **P0 inventory** and then the **P1 backup engine** on this branch with tests before changing app screens. Starting with a storage adapter and export/restore tests avoids locking a faulty file format into the public app.
+
+## Implementation status (2026-11-11)
+- Added `mandarin/backup.js` with local versioned ZIP export/import, CRC validation, Merge/Replace and IndexedDB personal image support.
+- Added Backup dialog and Upload card in `mandarin/index.html`.
+- Added `mandarin/STORAGE_AUDIT.md` and `mandarin/BACKUP_TESTING.md`.
+- Automated in-memory tests passed; real desktop and mobile browser tests are still required **before merging**.
+- No writes to Supabase or `main`.
