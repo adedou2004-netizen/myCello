@@ -74,7 +74,7 @@ async function readAssets(){
  })}finally{db.close()}
 }
 async function writeAssets(items,replace){
- if(!items.length&&!replace)return;
+ if(!items.length)return;
  const db=await openAssets();if(!db)throw Error("Browser does not support image storage.");
  try{await new Promise((resolve,reject)=>{
   const tx=db.transaction(STORE,"readwrite"),store=tx.objectStore(STORE);
