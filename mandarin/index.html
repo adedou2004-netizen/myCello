@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mandarin</title>
+<link rel="stylesheet" href="./capture.css">
 <style>
 :root{--green:#58CC02;--green-d:#46A302;--ink:#3C3C3C;--muted:#777;--line:#E5E5E5;--bg:#F7F7F7;--blue:#1CB0F6}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
@@ -91,7 +92,8 @@ dialog::backdrop{background:#0008}
 <dialog id="memoryAidDlg"><div class="dlghead"><strong id="memoryAidTitle">Memory Aid</strong><button id="memoryAidClose" type="button">Close</button></div><div class="dlgbody"><img id="memoryAidImg" alt="App-provided character memory aid" class="hidden"><p id="memoryAidNote"></p><p id="memoryAidStatus" class="muted"></p></div></dialog>
 <dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a Memory Palace card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="./capture-core.js"></script>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
 const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
@@ -99,7 +101,9 @@ const BUCKET=SUPABASE_URL+"/storage/v1/object/public/memory-palace-cards/";
 const SEED=[["一", "yī", "one"],["二", "èr", "two"],["三", "sān", "three"],["十", "shí", "ten"],["人", "rén", "person"],["大", "dà", "big"],["小", "xiǎo", "small"],["口", "kǒu", "mouth"],["日", "rì", "sun; day"],["月", "yuè", "moon; month"],["山", "shān", "mountain"],["水", "shuǐ", "water"],["火", "huǒ", "fire"],["木", "mù", "tree; wood"],["土", "tǔ", "earth; soil"],["田", "tián", "field"],["天", "tiān", "sky; day"],["上", "shàng", "up; above"],["下", "xià", "down; below"],["中", "zhōng", "middle"],["我", "wǒ", "I; me"],["你", "nǐ", "you"],["他", "tā", "he; him"],["她", "tā", "she; her"],["们", "men", "plural marker"],["好", "hǎo", "good"],["是", "shì", "to be"],["不", "bù", "not"],["有", "yǒu", "to have"],["在", "zài", "to be at"],["这", "zhè", "this"],["那", "nà", "that"],["哪", "nǎ", "which"],["谁", "shéi", "who"],["什", "shén", "what (part)"],["么", "me", "what (part)"],["的", "de", "possessive particle"],["了", "le", "completed-action particle"],["吗", "ma", "question particle"],["呢", "ne", "question particle"],["来", "lái", "come"],["去", "qù", "go"],["看", "kàn", "look; watch"],["见", "jiàn", "see; meet"],["听", "tīng", "listen"],["说", "shuō", "speak"],["读", "dú", "read"],["写", "xiě", "write"],["学", "xué", "study; learn"],["问", "wèn", "ask"],["吃", "chī", "eat"],["喝", "hē", "drink"],["做", "zuò", "do; make"],["走", "zǒu", "walk; leave"],["跑", "pǎo", "run"],["坐", "zuò", "sit"],["站", "zhàn", "stand"],["开", "kāi", "open; start"],["关", "guān", "close"],["回", "huí", "return"],["家", "jiā", "home; family"],["爸", "bà", "dad"],["妈", "mā", "mom"],["哥", "gē", "older brother"],["姐", "jiě", "older sister"],["弟", "dì", "younger brother"],["妹", "mèi", "younger sister"],["儿", "ér", "son; child"],["女", "nǚ", "woman; daughter"],["子", "zǐ", "child"],["朋", "péng", "friend (part)"],["友", "yǒu", "friend"],["老", "lǎo", "old"],["师", "shī", "teacher"],["生", "shēng", "life; student"],["同", "tóng", "same; together"],["名", "míng", "name"],["字", "zì", "character; word"],["国", "guó", "country"],["汉", "hàn", "Han; Chinese"],["年", "nián", "year"],["今", "jīn", "today; present"],["明", "míng", "bright; next"],["昨", "zuó", "yesterday"],["时", "shí", "time; hour"],["分", "fēn", "minute; divide"],["点", "diǎn", "o’clock; point"],["早", "zǎo", "early; morning"],["晚", "wǎn", "late; evening"],["午", "wǔ", "noon"],["春", "chūn", "spring"],["夏", "xià", "summer"],["秋", "qiū", "autumn"],["冬", "dōng", "winter"],["星", "xīng", "star"],["期", "qī", "period; week"],["前", "qián", "front; before"],["后", "hòu", "back; after"],["现", "xiàn", "present; appear"],["每", "měi", "every"],["零", "líng", "zero"],["四", "sì", "four"],["五", "wǔ", "five"],["六", "liù", "six"],["七", "qī", "seven"],["八", "bā", "eight"],["九", "jiǔ", "nine"],["百", "bǎi", "hundred"],["千", "qiān", "thousand"],["万", "wàn", "ten thousand"],["多", "duō", "many; much"],["少", "shǎo", "few; little"],["几", "jǐ", "how many"],["个", "gè", "general measure word"],["本", "běn", "measure word for books"],["只", "zhī", "measure word for animals"],["杯", "bēi", "cup"],["块", "kuài", "piece; yuan"],["钱", "qián", "money"],["元", "yuán", "yuan"],["白", "bái", "white"],["黑", "hēi", "black"],["红", "hóng", "red"],["蓝", "lán", "blue"],["绿", "lǜ", "green"],["黄", "huáng", "yellow"],["色", "sè", "color"],["长", "cháng", "long"],["短", "duǎn", "short"],["高", "gāo", "tall; high"],["新", "xīn", "new"],["旧", "jiù", "old; used"],["热", "rè", "hot"],["冷", "lěng", "cold"],["快", "kuài", "fast"],["慢", "màn", "slow"],["忙", "máng", "busy"],["累", "lèi", "tired"],["难", "nán", "difficult"],["易", "yì", "easy"],["爱", "ài", "love"],["喜", "xǐ", "like; joy"],["欢", "huān", "joyous"],["想", "xiǎng", "think; want"],["知", "zhī", "know"],["道", "dào", "way; know"],["觉", "jué", "feel; perceive"],["得", "de", "complement particle"],["笑", "xiào", "smile; laugh"],["哭", "kū", "cry"],["头", "tóu", "head"],["脸", "liǎn", "face"],["眼", "yǎn", "eye"],["耳", "ěr", "ear"],["手", "shǒu", "hand"],["脚", "jiǎo", "foot"],["心", "xīn", "heart"],["身", "shēn", "body"],["病", "bìng", "illness"],["医", "yī", "medicine; doctor"],["饭", "fàn", "cooked rice; meal"],["菜", "cài", "dish; vegetable"],["茶", "chá", "tea"],["果", "guǒ", "fruit"],["米", "mǐ", "rice"],["面", "miàn", "noodles; face"],["肉", "ròu", "meat"],["鱼", "yú", "fish"],["鸡", "jī", "chicken"],["蛋", "dàn", "egg"],["书", "shū", "book"],["笔", "bǐ", "pen"],["纸", "zhǐ", "paper"],["桌", "zhuō", "table"],["椅", "yǐ", "chair"],["门", "mén", "door"],["窗", "chuāng", "window"],["房", "fáng", "room; house"],["车", "chē", "vehicle"],["路", "lù", "road"],["电", "diàn", "electricity"],["话", "huà", "speech; phone"],["脑", "nǎo", "brain"],["影", "yǐng", "shadow; film"],["网", "wǎng", "net; internet"],["机", "jī", "machine"],["校", "xiào", "school"],["店", "diàn", "shop"],["院", "yuàn", "courtyard; institute"],["馆", "guǎn", "building; hall"],["东", "dōng", "east"],["西", "xī", "west"],["南", "nán", "south"],["北", "běi", "north"],["里", "lǐ", "inside"],["外", "wài", "outside"],["左", "zuǒ", "left"],["右", "yòu", "right"],["边", "biān", "side"],["近", "jìn", "near"],["腿", "tuǐ", "leg"],["肚", "dù", "belly"],["胖", "pàng", "plump; fat"],["肝", "gān", "liver"],["很", "hěn", "very"],["太", "tài", "too; very"],["都", "dōu", "all; both"],["也", "yě", "also"],["还", "hái", "still; also"],["再", "zài", "again"],["最", "zuì", "most"],["更", "gèng", "more; even more"],["真", "zhēn", "really; true"],["别", "bié", "do not; other"],["会", "huì", "can; know how to"],["能", "néng", "can; be able to"],["要", "yào", "want; need"],["给", "gěi", "give; for"],["跟", "gēn", "with; follow"],["从", "cóng", "from; follow"],["到", "dào", "arrive; to"],["对", "duì", "correct; toward"],["为", "wèi", "for; because of"],["因", "yīn", "cause; because"],["所", "suǒ", "place; that which"],["以", "yǐ", "by; with; in order to"],["已", "yǐ", "already"],["经", "jīng", "pass through; already (part)"],["过", "guò", "pass; experiential particle"],["着", "zhe", "ongoing-state particle"],["把", "bǎ", "disposal particle; hold"],["被", "bèi", "passive marker"],["让", "ràng", "let; allow"],["叫", "jiào", "call; be called"],["怎", "zěn", "how"],["样", "yàng", "kind; manner"],["和", "hé", "and; with"],["或", "huò", "or"],["但", "dàn", "but"],["可", "kě", "can; may"],["应", "yīng", "should; ought to"],["该", "gāi", "should"],["请", "qǐng", "please; invite"],["谢", "xiè", "thank"],["没", "méi", "not have; not"],["常", "cháng", "often; common"],["次", "cì", "time; occurrence"],["第", "dì", "ordinal prefix"],["两", "liǎng", "two (before measure words)"],["半", "bàn", "half"],["号", "hào", "number; date"],["周", "zhōu", "week"],["刚", "gāng", "just now"],["才", "cái", "only then; just"],["先", "xiān", "first; earlier"],["正", "zhèng", "just; currently; correct"],["起", "qǐ", "rise; start"],["床", "chuáng", "bed"],["睡", "shuì", "sleep"],["醒", "xǐng", "wake up"],["洗", "xǐ", "wash"],["穿", "chuān", "wear; pass through"],["衣", "yī", "clothes"],["服", "fú", "clothing; serve"],["鞋", "xié", "shoe"],["买", "mǎi", "buy"],["卖", "mài", "sell"],["找", "zhǎo", "look for; find"],["换", "huàn", "change; exchange"],["用", "yòng", "use"],["拿", "ná", "take; hold"],["放", "fàng", "put; release"],["带", "dài", "bring; carry"],["送", "sòng", "give; deliver"],["等", "děng", "wait; etc."],["帮", "bāng", "help"],["进", "jìn", "enter"],["出", "chū", "exit; go out"],["入", "rù", "enter"],["离", "lí", "leave; away from"],["住", "zhù", "live; reside"],["工", "gōng", "work; labor"],["作", "zuò", "work; make"],["事", "shì", "matter; thing"],["班", "bān", "class; work shift"],["司", "sī", "manage; company (part)"],["休", "xiū", "rest"],["息", "xī", "rest; breath"],["游", "yóu", "travel; swim"],["玩", "wán", "play"],["旅", "lǚ", "travel"],["票", "piào", "ticket"],["飞", "fēi", "fly"],["场", "chǎng", "place; field"],["雨", "yǔ", "rain"],["雪", "xuě", "snow"],["风", "fēng", "wind"],["云", "yún", "cloud"],["鹅", "é", "goose"],["饿", "è", "hungry"],["页", "yè", "page"],["叶", "yè", "leaf"],["树", "shù", "tree"],["羊", "yáng", "sheep; goat"],["筷", "kuài", "chopstick (in 筷子)"],["抢", "qiǎng", "grab; snatch; seize"],["段", "duàn", "section; segment; piece"]];
 const KEY="mandarinAppV2";
 const $=s=>document.querySelector(s);
+const escapeHTML=s=>String(s??" ").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
 let tab="today", study=null, reviewOrder=[], lessonQueue=[], lessonAt=0, quiz=null;
+let storageLoadError=null,storageBaseline=null;
 let db=load();
 function addSmileExample(data){
   if(!Array.isArray(data.examples)) data.examples=[];
@@ -112,7 +116,11 @@ function addSmileExample(data){
   return data;
 }
 function load(){
-  const saved=JSON.parse(localStorage.getItem(KEY)||"null");
+  let saved=null;
+  try{storageBaseline=localStorage.getItem(KEY);saved=JSON.parse(storageBaseline||"null");
+    if(saved) CaptureCore.validateDB(saved);
+  }catch(error){storageLoadError=error;}
+  if(storageLoadError) saved=null;
   if(saved&&saved.entries) return addSmileExample(saved);
   const entries=SEED.map((x,i)=>({id:"s"+i,simplified:x[0],traditional:"",pinyin:x[1],sound:"",meaning:x[2],type:"character",status:"new",source:"course"}));
   const lessons=[];
@@ -122,7 +130,11 @@ function load(){
   }
   return addSmileExample({entries,lessons,examples:[],reviews:{},palace:{}});
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function save(){
+  if(storageLoadError) throw Error("Saved dictionary could not be read. Use Capture backup/recovery before saving.");
+  if(localStorage.getItem(KEY)!==storageBaseline) throw Error("Dictionary changed in another tab. Reload before saving.");
+  const json=JSON.stringify(db);localStorage.setItem(KEY,json);storageBaseline=json;
+}
 function french(py){
   const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
   let s=[...String(py||"").toLowerCase()].map(c=>m[c]||c).join("").replace(/[^a-zü ]/g,"");
@@ -142,7 +154,7 @@ function effectiveDueTime(id){
   if(!r||!r.next||r.next<=today+86399999) return today;
   return localDayStart(r.next);
 }
-function dueIds(){const now=Date.now();return db.entries.filter(e=>{const r=db.reviews[e.id];return !r||!r.next||r.next<=now}).map(e=>e.id)}
+function dueIds(){const now=Date.now();return db.entries.filter(e=>{if(e.srsEligible===false)return false;const r=db.reviews[e.id];return !r||!r.next||r.next<=now}).map(e=>e.id)}
 function syncReviewOrder(){
   const due=dueIds(), eligible=new Set(due);
   reviewOrder=reviewOrder.filter(id=>eligible.has(id));
@@ -222,16 +234,16 @@ async function speak(text){
   }catch(error){fallback();}
 }
 function card(e, actions){
-  const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${e.traditional}</div>`:"";
+  const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${escapeHTML(e.traditional)}</div>`:"";
   const ex=examplesFor(e.id);
-  return `<div class="card"><div class="glyph">${e.simplified}</div>${trad}<div class="py">${e.pinyin||""}</div><div class="fr">${displaySound(e)}</div><div class="mean hidden" id="englishAnswer">${e.meaning||"No English yet"}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Memory Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
+  return `<div class="card"><div class="glyph">${escapeHTML(e.simplified)}</div>${trad}<div class="py">${escapeHTML(e.pinyin||"")}</div><div class="fr">${escapeHTML(displaySound(e))}</div><div class="mean hidden" id="englishAnswer">${escapeHTML(e.meaning||"No English yet")}</div><div class="tools"><button data-act="english">English</button><button data-act="memoryAid">Aid</button><button data-act="myPalace">Memory Palace</button><button data-act="examples">Examples${ex.length?" "+ex.length:""}</button><button data-act="hear">Hear</button><button data-act="compare">Record</button></div>${actions||""}<div id="hint"></div></div>`;
 }
 function showHint(kind,e){
   if(!e) return;
   const box=$("#hint");
   if(kind==="examples"){
     const ex=examplesFor(e.id);
-    box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${x.surface}</b>${x.pinyin?`<div class="muted">${x.pinyin}</div>`:""}<div>${x.meaning||""}</div><div class="muted">${x.source||""}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
+    box.innerHTML=ex.length?ex.map(x=>`<div class="ex"><b>${escapeHTML(x.surface)}</b>${x.pinyin?`<div class="muted">${escapeHTML(x.pinyin)}</div>`:""}<div>${escapeHTML(x.meaning||"")}</div>${x.note?`<div class="muted">${escapeHTML(x.note)}</div>`:""}<div class="muted">${escapeHTML(x.source||"")}</div></div>`).join(""):"<p class='muted'>No example yet. Capture one and attach it to this character.</p>";
   }
   if(kind==="memoryAid") openMemoryAid(e);
   if(kind==="myPalace") openMemoryPalaceCard(e);
@@ -250,7 +262,7 @@ function renderToday(){
   bindCard();
 }
 function renderLessons(){
-  $("#app").innerHTML=`<div class="card"><button class="primary" id="newLesson" type="button">New lesson from a book or class</button><p class="muted">A lesson is a list. Deleting a lesson does not delete the characters.</p></div>`+db.lessons.map(l=>`<div class="card" style="display:flex;gap:8px;align-items:center"><button class="listbtn" data-lesson="${l.id}" style="flex:1;margin:0;border:0;background:transparent;text-align:left"><strong>${l.title}</strong><div class="muted">${l.kind} · ${l.items.length} items</div><div class="progress"><span style="width:${Math.round(100*l.items.filter(id=>db.reviews[id]&&db.reviews[id].streak>=3).length/Math.max(1,l.items.length))}%"></span></div></button><button data-del="${l.id}" type="button">Delete</button></div>`).join("");
+  $("#app").innerHTML=`<div class="card"><button class="primary" id="newLesson" type="button">New lesson from a book or class</button><p class="muted">A lesson is a list. Deleting a lesson does not delete the characters.</p></div>`+db.lessons.map(l=>`<div class="card" style="display:flex;gap:8px;align-items:center"><button class="listbtn" data-lesson="${l.id}" style="flex:1;margin:0;border:0;background:transparent;text-align:left"><strong>${escapeHTML(l.title)}</strong><div class="muted">${escapeHTML(l.kind)} · ${l.items.length} items</div><div class="progress"><span style="width:${Math.round(100*l.items.filter(id=>(db.lessonPractice?.[id]?.passes||0)>=3||db.reviews[id]&&db.reviews[id].streak>=3).length/Math.max(1,l.items.length))}%"></span></div></button><button data-del="${l.id}" type="button">Delete</button></div>`).join("");
   $("#newLesson").onclick=()=>{const title=prompt("Lesson name, for example The Little Prince, chapter 2"); if(!title) return; db.lessons.unshift({id:"u"+Date.now(),title,kind:"book",source:title,items:[]}); save(); renderLessons()};
   document.querySelectorAll("[data-lesson]").forEach(b=>b.onclick=()=>openLesson(b.dataset.lesson));
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>deleteLesson(b.dataset.del));
@@ -276,91 +288,15 @@ function openLesson(id){
 function showLesson(){
   const id=lessonQueue[lessonAt]; const e=id?entry(id):null;
   if(!e){$("#app").innerHTML=`<div class="card">Lesson finished.</div><button id="backLessons" class="primary">Back to lessons</button>`; $("#backLessons").onclick=()=>select("lessons"); return}
-  $("#app").innerHTML=card(e,`<div class="answer"><button data-act="again">Again</button><button class="primary" data-act="next">Next</button></div><p class="muted">${lessonAt+1} of ${lessonQueue.length}</p>`);
+  $("#app").innerHTML=card(e,`<div class="answer"><button data-act="lessonAgain">Again</button><button class="primary" data-act="next">Knew it · Next</button></div><p class="muted">${lessonAt+1} of ${lessonQueue.length}</p>`);
   bindCard();
 }
-function renderCapture(){
-  $("#app").innerHTML=`<div id="savedBanner" class="card hidden"></div><div class="card"><div class="finder" id="finder"><video id="cam" autoplay playsinline muted></video><div class="box"></div></div><p class="muted" id="camHint">Point the Chinese at the green box, then take the picture.</p><button class="primary" id="openCam" type="button">Take picture</button><input id="photoFile" type="file" accept="image/*" capture="environment" hidden><div class="kicker">DETECTED CHARACTERS</div><div class="chips" id="charChips"></div><div class="kicker">DETECTED PHRASE</div><button class="phrase" id="phraseChip" type="button">Tap a picture first</button><div class="row" style="margin-top:8px"><button class="primary" id="saveChar" type="button">Save character</button><button class="primary" id="saveExpr" type="button">Save expression</button></div><label>Sentence you met</label><input id="capNote" placeholder="I love to play pingpong with my friends"><label>Add to lesson</label><div class="row"><select id="capLesson" style="flex:1">${db.lessons.map(l=>`<option value="${l.id}">${l.title}</option>`).join("")}</select><button id="newLessonCap" type="button">New lesson</button><button id="delLessonCap" type="button">Delete</button></div><p id="capStatus" class="muted"></p></div>`;
-  $("#openCam").onclick=openCamera;
-  $("#photoFile").onchange=()=>readPhoto($("#photoFile").files[0]);
-  $("#saveChar").onclick=()=>savePicked("character");
-  $("#saveExpr").onclick=()=>savePicked("expression");
-  $("#newLessonCap").onclick=newLessonFromCapture;
-  $("#delLessonCap").onclick=()=>deleteLesson($("#capLesson").value);
-  startPreview();
-}
-function newLessonFromCapture(){
-  const title=prompt("Name the lesson, for example Pingpong with friends");
-  if(!title) return;
-  const id="u"+Date.now();
-  db.lessons.unshift({id,title,kind:"book",source:title,items:[]});
-  save();
-  const sel=$("#capLesson");
-  const opt=document.createElement("option");
-  opt.value=id; opt.textContent=title; sel.prepend(opt); sel.value=id;
-  $("#capStatus").textContent="Lesson created: "+title+". Save the word into it.";
-}
-let camStream=null, picked="";
-async function startPreview(){
-  const video=$("#cam"); if(!video||!navigator.mediaDevices) return;
-  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false}); video.srcObject=camStream;}
-  catch(e){$("#camHint").textContent="Camera did not open. Take picture will ask for a photo instead.";}
-}
-function stopPreview(){ if(camStream){camStream.getTracks().forEach(t=>t.stop()); camStream=null;} }
-async function openCamera(){
-  if(!camStream){$("#photoFile").click(); return;}
-  const video=$("#cam"), canvas=document.createElement("canvas");
-  const vr=video.getBoundingClientRect();
-  canvas.width=video.videoWidth||1080; canvas.height=video.videoHeight||1440;
-  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
-  const blob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",.92));
-  readPhoto(blob);
-}
-async function readPhoto(file){
-  if(!file) return;
-  $("#camHint").textContent="Reading the green box…";
-  try{
-    const result=await Tesseract.recognize(file,"chi_sim+eng");
-    const runs=(result.data.text.match(/[\u3400-\u9fff]+/g)||[]);
-    const chars=[...new Set(runs.join("").split(""))].slice(0,12);
-    const phrase=runs.join("")||"";
-    $("#charChips").innerHTML=chars.map(ch=>`<button class="chip" data-pick="${ch}">${ch}</button>`).join("")||"<span class='muted'>No characters found. Try closer.</span>";
-    $("#phraseChip").textContent=phrase||"No phrase found";
-    picked=phrase||chars[0]||"";
-    document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{picked=b.dataset.pick; document.querySelectorAll("[data-pick]").forEach(x=>x.classList.remove("on")); b.classList.add("on");});
-    $("#phraseChip").onclick=()=>{picked=phrase};
-    $("#camHint").textContent="Tap the character or phrase, then save.";
-  }catch(e){$("#camHint").textContent="Could not read that photo. Try again with the text filling the green box.";}
-}
-function savePicked(kind){
-  const text=(picked||$("#phraseChip").textContent||"").trim();
-  if(!text||text.startsWith("Tap")||text.startsWith("No ")){$("#capStatus").textContent="Choose a character or phrase first."; return;}
-  const value=kind==="character"?[...text][0]:text;
-  const lesson=$("#capLesson").value;
-  const note=$("#capNote").value.trim();
-  let target=byText(value);
-  const already=!!target;
-  if(!target){
-    target={id:"u"+Date.now(),simplified:value,traditional:"",pinyin:"",sound:"",meaning:note,type:kind==="expression"?"expression":"character",status:"new",source:"photo"};
-    db.entries.unshift(target);
-  } else if(note && !target.meaning) target.meaning=note;
-  const l=db.lessons.find(x=>x.id===lesson);
-  if(l&&!l.items.includes(target.id)) l.items.push(target.id);
-  if(note || value) db.examples.unshift({id:"e"+Date.now(),entryId:target.id,surface:value,meaning:note,source:l?l.title:""});
-  save();
-  const where=l?l.title:"the dictionary";
-  const msg=(already?"Already in the dictionary. ":"Saved. ")+value+" is in "+where+".";
-  $("#capStatus").textContent=msg;
-  const banner=$("#savedBanner");
-  banner.classList.remove("hidden");
-  banner.innerHTML="<strong>Saved</strong><div>"+msg+"</div><button id='seeSaved' type='button'>Open it</button>";
-  $("#seeSaved").onclick=()=>{study=target.id; select("today");};
-  banner.scrollIntoView({behavior:"smooth",block:"start"});
-}
+function renderCapture(){captureRender();}
+function stopPreview(){if(typeof captureLeave==='function') captureLeave();}
 function renderLibrary(){
   const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
   const list=db.entries.filter(e=>(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.type||"")).toLowerCase().includes(q));
-  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${q}"><div style="height:8px"></div><p class="muted">Showing ${list.length} of ${db.entries.length}. Lessons are lists. This is the full dictionary.</p>`+list.map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${e.simplified}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${e.type||"character"} · ${e.pinyin||"no pinyin"} · ${french(e.pinyin)} · ${e.meaning||"no meaning yet"}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
+  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${escapeHTML(q)}"><div style="height:8px"></div><p class="muted">Showing ${list.length} of ${db.entries.length}. Lessons are lists. This is the full dictionary.</p>`+list.map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${escapeHTML(e.simplified)}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${escapeHTML(e.type||"character")} · ${escapeHTML(e.pinyin||"no pinyin")} · ${escapeHTML(french(e.pinyin))} · ${escapeHTML(e.meaning||"no meaning yet")}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
   $("#libQ").oninput=renderLibrary;
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
 }
@@ -484,7 +420,7 @@ function renderQuiz(){
     }catch(e){$("#quizMsg").textContent="Drawing data is not available for "+target.simplified;}
   } else {
     const opts=[target].concat(pool.filter(e=>e.id!==target.id).sort(()=>Math.random()-.5).slice(0,3)).sort(()=>Math.random()-.5);
-    $("#app").innerHTML=`<div class="card">${modes}<div class="muted">Listening quiz</div><button class="primary" id="play">Hear the word</button><div class="chips" style="margin-top:12px">${opts.map(e=>`<button class="chip" data-choice="${e.id}">${e.simplified}<div class="muted">${e.pinyin}</div></button>`).join("")}</div><p id="quizMsg" class="muted"></p><button id="nextQuiz" type="button">Next</button></div>`;
+    $("#app").innerHTML=`<div class="card">${modes}<div class="muted">Listening quiz</div><button class="primary" id="play">Hear the word</button><div class="chips" style="margin-top:12px">${opts.map(e=>`<button class="chip" data-choice="${e.id}">${escapeHTML(e.simplified)}<div class="muted">${escapeHTML(e.pinyin)}</div></button>`).join("")}</div><p id="quizMsg" class="muted"></p><button id="nextQuiz" type="button">Next</button></div>`;
     $("#play").onclick=()=>speak(target.simplified);
     document.querySelectorAll("[data-choice]").forEach(b=>b.onclick=()=>{const ok=b.dataset.choice===quiz; $("#quizMsg").textContent=ok?"Correct.":"Not this one. The word was "+target.simplified+" "+target.pinyin; grade(target.id,ok)});
   }
@@ -500,7 +436,8 @@ function bindCard(){
     if(act==="english"){const a=$("#englishAnswer"); a.classList.toggle("hidden"); b.textContent=a.classList.contains("hidden")?"Show English":"Hide English";}
     if(act==="examples"||act==="memoryAid"||act==="myPalace") showHint(act,e);
     if(act==="again"||act==="good"){grade(e.id,act==="good"); reviewOrder=reviewOrder.filter(id=>id!==e.id); study=null; renderToday()}
-    if(act==="next"){grade(e.id,true); lessonAt++; showLesson()}
+    if(act==="lessonAgain"){CaptureCore.practice(db,e.id,false);save();}
+    if(act==="next"){CaptureCore.practice(db,e.id,true);save(); lessonAt++; showLesson()}
   });
 }
 const MEMORY_AIDS={
@@ -640,6 +577,8 @@ function select(which){
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
 select("today"); remotePalaceReady=loadRemotePalace();
+if(storageLoadError){const warning=document.createElement('p');warning.setAttribute('role','alert');warning.textContent='Your saved dictionary could not be read. Existing data has not been overwritten. Open Capture → Backup and recovery to restore a backup.';document.querySelector('header').append(warning);}
 </script>
+<script src="./capture.js"></script>
 </body>
 </html>
