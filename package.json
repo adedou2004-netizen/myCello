@@ -1,0 +1,14 @@
+{
+  "name": "mycello-capture-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test mandarin/tests/*.test.cjs",
+    "test:ocr": "node mandarin/tests/ocr-benchmark.cjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.0.0",
+    "jsdom": "26.1.0",
+    "pngjs": "7.0.0",
+    "tesseract.js": "5.1.1"
+  }
+}

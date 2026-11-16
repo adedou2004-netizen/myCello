@@ -1,0 +1,18 @@
+/* Capture keeps the app's existing palette and controls. */
+.capture{max-width:900px;margin:auto}.capture h2{font-size:19px;margin:0 0 12px}.capture h3{font-size:16px}
+.capture button:disabled{opacity:.5;transform:none;cursor:not-allowed}.capture button:focus-visible,.capture textarea:focus-visible,.crop-handle:focus-visible{outline:3px solid #12689d;outline-offset:3px}
+.capture .camera-view{background:#111;border-radius:14px;overflow:hidden}.capture video{display:block;width:100%;max-height:55vh;object-fit:contain}
+.capture .crop-stage{position:relative;margin:auto;width:fit-content;max-width:100%;line-height:0;overflow:hidden;background:#111;border-radius:8px}
+.capture .crop-stage>img{display:block;max-width:100%;max-height:55vh;width:auto;height:auto;user-select:none;pointer-events:none}
+.capture .crop-box{position:absolute;border:3px solid var(--green);box-shadow:0 0 0 9999px #0006;touch-action:none;cursor:move}
+.capture .crop-handle{position:absolute;width:44px;height:44px;min-height:44px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none;touch-action:none}
+.capture .crop-handle::after{content:'';position:absolute;width:14px;height:14px;left:15px;top:15px;border:2px solid #fff;background:var(--green);border-radius:3px}
+.crop-handle[data-handle=nw]{left:-3px;top:-3px}.crop-handle[data-handle=ne]{right:-3px;top:-3px}.crop-handle[data-handle=sw]{left:-3px;bottom:-3px}.crop-handle[data-handle=se]{right:-3px;bottom:-3px}
+.capture .crop-preview{display:block;max-width:100%;max-height:190px;object-fit:contain;margin:8px auto;background:#fff;border:1px solid var(--line)}
+.capture textarea.chinese{font-size:clamp(30px,7vw,44px);font-family:'Noto Sans CJK SC','PingFang SC',system-ui,sans-serif;line-height:1.6;font-weight:500;min-height:160px}
+.capture .selection{font-size:36px;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border:2px solid var(--line);border-radius:14px;min-height:72px}
+.capture .selection button{font-size:32px;min-width:48px;padding:6px;margin:2px;box-shadow:none;border-color:transparent}.capture .selection button.on{border-color:var(--blue)}
+.capture .status{min-height:28px;margin:10px 0;white-space:pre-wrap}.capture .error{color:#a32920}.capture .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.capture details{margin-top:14px}.capture summary{cursor:pointer;padding:12px 0;font-weight:800}.capture pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.capture .actions{margin:12px 0;display:flex;flex-wrap:wrap;gap:8px}.capture .actions button{min-height:48px}
+.capture progress{width:100%}.capture .privacy{font-size:13px;color:var(--muted)}
+@media(max-width:520px){.capture .fields{grid-template-columns:1fr}.capture .actions>*{flex:1 1 auto}.capture .crop-stage>img{max-height:48vh}.capture .card{padding:12px}}
