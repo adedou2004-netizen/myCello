@@ -28,3 +28,24 @@ test('crop preview draws only selected source pixels and exposes that exact blob
 test('restoring a draft retains manual pinyin, translation and selected expression',async()=>{const a=app();manual(a,'她今天非常');a.run('captureSetSelection(3,5)');a.$('capPinyin').value='fēicháng';a.$('capMeaning').value='very';a.$('capTranslation').value='She is very…';await a.run('capturePersistDraft()');const draft=await a.run("captureDraftStore('get')");a.w.savedDraft=draft;a.run('captureResume=savedDraft;captureSession.clear();captureForm={};captureRestore()');assert.equal(a.$('capPinyin').value,'fēicháng');assert.equal(a.$('capMeaning').value,'very');assert.equal(a.$('capTranslation').value,'She is very…');assert.equal(a.run('captureSelection.text'),'非常');a.dom.window.close();});
 test('captured source text is rendered as text, never as injected HTML',async()=>{const a=app();manual(a,'她<script>alert(1)</script>');a.run('captureSetSelection(0,captureSession.text.length)');a.$('capKind').value='sentence';a.$('capSave').click();await tick();a.run("select('library')");assert.equal(a.w.document.querySelectorAll('#app script').length,0);assert.match(a.$('app').textContent,/<script>/);a.dom.window.close();});
 test('changing the crop preserves corrected text as an unverified draft',()=>{const a=app();manual(a,'她今天很好');a.run('captureChangeCrop({x:.1,y:.1,w:.8,h:.8})');assert.equal(a.$('capText').value,'她今天很好');assert.equal(a.run('captureSession.verified'),false);assert.match(a.$('capStatus').textContent,/kept as a draft/);a.dom.window.close();});
+
+test('opening camera clears previous capture, form, selection and recovery draft without changing vocabulary',async()=>{
+ const a=app();manual(a,'她今天非常');a.run('captureSetSelection(0,1)');a.$('capSource').value='Old book';a.$('capPinyinCorrect').value='wu';a.run('captureOfferPinyin();capturePhoto=new Blob(["old-photo"]);captureCropBlob=new Blob(["old-crop"]);capturePhotoURL="blob:old-photo";captureCropURL="blob:old-crop"');
+ await a.run('capturePersistDraft()');const before=a.run('JSON.stringify(db)');
+ let resolve;a.w.navigator.mediaDevices={getUserMedia:()=>new Promise(r=>resolve=r)};a.$('capOpen').click();
+ for(const id of ['capCropPanel','capReview','capSavePanel','capRecover'])assert.equal(a.$(id).classList.contains('hidden'),true,id);
+ for(const id of ['capText','capPinyinCorrect','capSource','capPinyin','capMeaning'])assert.equal(a.$(id).value,'',id);
+ assert.equal(a.$('capPinyinChoices').children.length,0);assert.equal(a.$('capPhoto').hasAttribute('src'),false);
+ assert.equal(a.run('capturePhoto'),null);assert.equal(a.run('captureCropBlob'),null);assert.equal(a.run('captureSelection'),null);assert.equal(a.$('capSave').disabled,true);
+ await a.run('captureDraftWrites');assert.equal(await a.run("captureDraftStore('get')"),undefined);assert.equal(a.run('JSON.stringify(db)'),before);
+ a.run("select('library')");resolve({getTracks:()=>[{stop(){}}]});await tick();a.dom.window.close();
+});
+test('new photo shows crop step while review remains hidden until recognition',async()=>{
+ const a=app();manual(a,'她今天非常');a.w.photo=new a.w.Blob(['new-photo']);await a.run('captureAcceptPhoto(photo)');
+ assert.equal(a.$('capCropPanel').classList.contains('hidden'),false);assert.equal(a.$('capReview').classList.contains('hidden'),true);assert.equal(a.$('capText').value,'');a.dom.window.close();
+});
+test('reset invalidates late recognition results',async()=>{
+ const a=app();let finish;a.w.testCrop=new a.w.Blob(['crop']);a.run('captureCropBlob=testCrop');a.w.Tesseract={createWorker:async()=>({setParameters:async()=>{},recognize:()=>new Promise(r=>finish=r),terminate:async()=>{}})};
+ const pending=a.run('captureRecognize()');await tick();a.run('captureReset()');finish({data:{text:'旧照片',confidence:90}});await pending;
+ assert.equal(a.$('capText').value,'');assert.equal(a.$('capReview').classList.contains('hidden'),true);assert.equal(a.$('capSave').disabled,true);a.dom.window.close();
+});
