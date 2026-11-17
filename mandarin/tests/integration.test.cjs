@@ -49,3 +49,20 @@ test('reset invalidates late recognition results',async()=>{
  const pending=a.run('captureRecognize()');await tick();a.run('captureReset()');finish({data:{text:'旧照片',confidence:90}});await pending;
  assert.equal(a.$('capText').value,'');assert.equal(a.$('capReview').classList.contains('hidden'),true);assert.equal(a.$('capSave').disabled,true);a.dom.window.close();
 });
+
+test('complete existing September entry, link HSK, reload and keep English hidden',async()=>{
+ const a=app();a.run("db.entries.push({id:'september',simplified:'九月',pinyin:'',meaning:'',type:'expression'});db.lessons.push({id:'hsk',title:'HSK',items:[]});captureRender()");
+ manual(a,'九月');a.run('captureSetSelection(0,2)');
+ assert.equal(a.$('capPinyin').readOnly,false);assert.equal(a.$('capMeaning').readOnly,false);
+ a.$('capPinyin').value='jiǔyuè';a.$('capMeaning').value='September';a.$('capLesson').value='hsk';a.$('capSave').click();await tick();
+ assert.match(a.$('capStatus').textContent,/saved to lesson: HSK/);
+ const saved=JSON.parse(a.w.localStorage.getItem('mandarinAppV2'));
+ assert.equal(saved.entries.filter(e=>e.simplified==='九月').length,1);assert.equal(saved.entries.find(e=>e.id==='september').pinyin,'jiǔyuè');assert.equal(saved.entries.find(e=>e.id==='september').meaning,'September');
+ const b=app(saved);b.run("openLesson('hsk')");assert.equal(b.w.document.querySelector('.py').textContent,'jiǔyuè');assert.equal(b.$('englishAnswer').textContent,'September');assert.equal(b.$('englishAnswer').classList.contains('hidden'),true);
+ b.w.document.querySelector('[data-act="english"]').click();assert.equal(b.$('englishAnswer').classList.contains('hidden'),false);
+ a.dom.window.close();b.dom.window.close();
+});
+test('existing pinyin and meaning remain protected while missing French can be completed',async()=>{
+ const a=app();manual(a,'她');a.run('captureSetSelection(0,1)');assert.equal(a.$('capPinyin').readOnly,true);assert.equal(a.$('capMeaning').readOnly,true);assert.equal(a.$('capMeaningFr').readOnly,false);
+ a.$('capMeaningFr').value='elle';a.$('capSave').click();await tick();assert.equal(a.run("db.entries.find(e=>e.simplified==='她').meaning_fr"),'elle');assert.match(a.$('capStatus').textContent,/Dictionary only/);a.dom.window.close();
+});
