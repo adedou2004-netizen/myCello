@@ -60,6 +60,13 @@ function captureRender(){
   <div class="actions"><button id="capRecognize" class="primary">3 · Recognize selected area</button><button id="capCancel" class="hidden">Cancel recognition</button></div><progress id="capProgress" max="1" value="0" class="hidden" aria-label="Recognition progress"></progress></div>
   <div id="capReview" class="card hidden"><h2>4 · Review and correct</h2><p class="muted">Compare with the crop above. Correct every mistake before confirming. Pinyin annotations are not vocabulary.</p>
   <label for="capText">Recognized Chinese text — please check</label><textarea id="capText" class="chinese" lang="zh-Hans" spellcheck="false" rows="4"></textarea>
+  <div class="pinyin-correction" style="margin:14px 0;padding:12px;border:1px solid #d7ded5;border-radius:12px">
+  <label for="capPinyinCorrect">Correct with pinyin (keep your English keyboard)</label>
+  <p class="muted" style="margin:6px 0">Select a wrong character in the text above (long-press), type pinyin below, then tap the correct choice. To insert a missing character, place the cursor where it belongs.</p>
+  <input id="capPinyinCorrect" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. wu, wu3, xia, xia4">
+  <div id="capPinyinChoices" class="actions" aria-label="Chinese character suggestions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px"></div>
+  <p id="capPinyinHelp" class="muted" aria-live="polite">Suggestions come from your dictionary and common characters. Check each choice against the photograph.</p>
+  </div>
   <div class="actions"><button id="capConfirm" class="primary">Confirm corrected text</button></div><p id="capVerified" role="status"></p>
   <div id="capSavePanel" class="hidden"><h3>5 · Select and save</h3><p class="muted">Tap a character. For a phrase, enable Select range and tap the first and last characters. You can also highlight text in the field above and press Use highlighted text.</p>
   <div id="capTokens" class="selection" aria-label="Select characters from confirmed text"></div><div class="actions"><button id="capRange" aria-pressed="false">Select range</button><button id="capUseHighlight">Use highlighted text</button><button id="capSelectAll">Select whole text</button></div>
@@ -83,6 +90,11 @@ function captureRender(){
   cap('capFile').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(file)await captureReadFile(file);};
   cap('capBackupFile').onchange=e=>captureImport(e.target.files[0]);
   cap('capText').oninput=()=>{captureSession.edit(cap('capText').value);captureSelection=null;captureLastIndex=null;captureUpdateVerified();captureQueueDraft();};
+  cap('capText').addEventListener('click',captureRememberCursor);
+  cap('capText').addEventListener('keyup',captureRememberCursor);
+  cap('capText').addEventListener('select',captureRememberCursor);
+  cap('capPinyinCorrect').addEventListener('input',captureOfferPinyin);
+  cap('capPinyinCorrect').addEventListener('focus',captureOfferPinyin);
   cap('capExisting').onchange=()=>{captureFillEntry();captureQueueDraft();};
   for(const id of ['capPinyin','capMeaning','capMeaningFr','capTranslation','capSourcePinyin','capSource','capNote','capLesson','capKind'])cap(id).oninput=()=>{captureQueueDraft();captureUpdateSave();};
   cap('capOptimize').onchange=()=>captureChangeCrop({...captureCrop});
@@ -233,6 +245,67 @@ async function captureRecognize(){
   finally{clearTimeout(timeout);if(captureSession.current(token)){captureSession.busy=false;captureBusy(false);}}
 }
 function captureDebug(){if(cap('capDebug'))cap('capDebug').textContent=JSON.stringify(captureDiagnostic,null,2);}
+
+// Lightweight on-page pinyin correction: no keyboard switch and no remote request.
+// A small common-character index complements the user's saved vocabulary.
+// Candidates are suggestions, never automatically substituted into OCR text.
+let captureCorrectionCursor={start:0,end:0};
+const capturePinyinCommon={
+'a':'啊阿','ai':'爱矮挨','an':'安按案','ba':'八把爸吧','bai':'白百摆','ban':'半班办','bao':'包报抱','bei':'北杯被','ben':'本奔','bi':'比笔必','bian':'边变便','bu':'不步部',
+'cha':'茶查差','chang':'长常唱','che':'车','chi':'吃迟持','chu':'出初','chuan':'穿船','ci':'次词','cong':'从聪','cuo':'错',
+'da':'大打答','dan':'但单蛋','dao':'到道刀','de':'的得地','deng':'等灯','di':'地第弟低','dian':'点电店','dong':'东动冬','dou':'都豆','du':'读度','dui':'对','duo':'多朵',
+'er':'二儿耳','fa':'发法','fan':'饭反翻','fang':'方房放','fei':'飞非','fen':'分份','feng':'风','fu':'父复服福',
+'gao':'高告','ge':'个哥歌','gei':'给','gen':'跟根','gong':'工公共','gou':'狗够','guo':'国过果',
+'hai':'还海孩','han':'汉汗','hao':'好号','he':'和喝河','hen':'很','hou':'后','hua':'话花画','huan':'欢换','hui':'会回','huo':'火活',
+'ji':'几机鸡记','jia':'家加假','jian':'见件间建','jiang':'讲江','jiao':'叫教角','jie':'姐接节','jin':'今进近','jing':'京经','jiu':'九久就','ju':'句',
+'kai':'开','kan':'看','ke':'可课客','kou':'口','kuai':'快块','lai':'来','lan':'蓝','lao':'老','le':'了乐','lei':'累','li':'里理力','lian':'脸连','liang':'两亮','lin':'林','ling':'零','liu':'六流','long':'龙','lou':'楼','lu':'路录','lv':'绿',
+'ma':'妈马吗','mai':'买卖','man':'慢满','mao':'猫毛','mei':'没美每','men':'们门','mi':'米','mian':'面','ming':'名明','mo':'末','mu':'木母目',
+'na':'那拿','nai':'奶','nan':'男南难','ne':'呢','nei':'内','neng':'能','ni':'你','nian':'年','nin':'您','niu':'牛','nong':'农','nu':'努','nv':'女',
+'pa':'怕爬','peng':'朋','pi':'皮','piao':'票','ping':'平苹','po':'破','qi':'七起气','qian':'前钱千','qiang':'强','qiao':'桥','qin':'亲','qing':'请清青','qiu':'秋球','qu':'去取',
+'ran':'然','rang':'让','ren':'人认','ri':'日','rong':'容','rou':'肉','ru':'入如','san':'三','se':'色','sha':'沙','shan':'山','shang':'上商','shao':'少烧','she':'社','shen':'什身神','sheng':'生声','shi':'是十时事市师','shou':'手首','shu':'书树数','shui':'水谁睡','shuo':'说','si':'四思','song':'送','su':'素','sui':'岁',
+'ta':'他她它','tai':'太台','tan':'谈','tang':'汤糖','tian':'天田甜','ting':'听停','tong':'同通','tou':'头','tu':'土图','tui':'推',
+'wa':'娃','wai':'外','wan':'万晚完','wang':'王往忘','wei':'为位未','wen':'问文','wo':'我','wu':'午五无物武舞屋乌吴务',
+'xi':'西洗喜习','xia':'下夏','xian':'先现线','xiang':'想向像','xiao':'小笑校','xie':'写些谢','xin':'新心','xing':'行星','xiong':'兄','xiu':'休','xu':'学需','xue':'学雪',
+'ya':'呀牙','yan':'眼言','yang':'样羊','yao':'要药','ye':'也夜','yi':'一衣以意已医','yin':'音因','ying':'英应','yong':'用永','you':'有又友右','yu':'雨语鱼月','yuan':'元远园','yue':'月越',
+'zai':'在再','zan':'咱','zao':'早','ze':'则','zen':'怎','zhan':'站','zhang':'张长','zhao':'找照','zhe':'这着','zhen':'真','zheng':'正整','zhi':'只知纸之','zhong':'中种重','zhou':'周州','zhu':'主住猪','zhuan':'转','zi':'子字自','zou':'走','zu':'足组','zuo':'做作坐左'
+};
+function capturePinyinKey(text){
+  return String(text||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ü|v/g,'u').replace(/[1-5]/g,'').replace(/[^a-z]/g,'');
+}
+function captureRememberCursor(){
+  const field=cap('capText');if(!field)return;
+  captureCorrectionCursor={start:field.selectionStart,end:field.selectionEnd};
+}
+function captureOfferPinyin(){
+  const input=cap('capPinyinCorrect'),root=cap('capPinyinChoices'),help=cap('capPinyinHelp');
+  if(!input||!root)return;
+  const key=capturePinyinKey(input.value);root.replaceChildren();
+  if(!key){help.textContent='Type pinyin (tone marks or numbers optional), then choose a character.';return;}
+  const candidates=[];
+  function add(text){for(const ch of Array.from(String(text||''))){if(/[\u3400-\u9fff]/u.test(ch)&&!candidates.includes(ch))candidates.push(ch);}}
+  add(capturePinyinCommon[key]||'');
+  for(const entry of db.entries||[]){
+    if(capturePinyinKey(entry.pinyin)===key)add(entry.simplified||entry.hanzi||'');
+  }
+  if(!candidates.length){help.textContent='No suggestion found for '+input.value+'. Try another spelling, or add the character with a Chinese keyboard.';return;}
+  for(const ch of candidates.slice(0,32)){
+    const button=document.createElement('button');button.type='button';button.textContent=ch;button.lang='zh-Hans';
+    button.style.cssText='font-size:27px;min-width:46px;min-height:46px;padding:5px 10px;border:1px solid #cbd5c7;border-radius:9px;background:#f3faf0;color:#17251b';
+    button.onclick=()=>captureInsertCorrection(ch);root.append(button);
+  }
+  help.textContent='Select a character in the OCR text to replace it, or put the cursor where you want to insert. Then tap a candidate. Confirm the corrected sentence afterward.';
+}
+function captureInsertCorrection(ch){
+  const field=cap('capText');if(!field)return;
+  const old=field.value;let {start,end}=captureCorrectionCursor;
+  start=Math.max(0,Math.min(start,old.length));end=Math.max(start,Math.min(end,old.length));
+  //   field.value=old.slice(0,start)+ch+old.slice(end);
+  const next=start+ch.length;field.focus();field.setSelectionRange(next,next);
+  captureCorrectionCursor={start:next,end:next};
+  captureSession.edit(field.value);captureSelection=null;captureLastIndex=null;captureUpdateVerified();captureQueueDraft();
+  cap('capPinyinCorrect').value='';captureOfferPinyin();
+}
+
 function captureConfirm(){
   try{captureSession.edit(cap('capText').value.normalize('NFC').trim());captureSession.confirm();cap('capText').value=captureSession.text;captureSelection=null;captureLastIndex=null;captureUpdateVerified();captureQueueDraft();captureMessage('Text confirmed. Select the character, expression, or sentence to save.');}catch(e){captureMessage(e.message,true);}
 }
