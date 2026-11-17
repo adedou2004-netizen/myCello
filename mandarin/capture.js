@@ -64,6 +64,7 @@ function captureRender(){
   <label for="capPinyinCorrect">Correct with pinyin (keep your English keyboard)</label>
   <p class="muted" style="margin:6px 0">Select a wrong character in the text above (long-press), type pinyin below, then tap the correct choice. To insert a missing character, place the cursor where it belongs.</p>
   <input id="capPinyinCorrect" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. wu, wu3, xia, xia4">
+  <p class="muted"><strong>Tones:</strong> 1 = ā (high and level) · 2 = á (rising) · 3 = ǎ (low, dipping) · 4 = à (falling). Put the number after each syllable: <strong>jiu3 yue4 → jiǔyuè</strong> (September).</p>
   <div id="capPinyinChoices" class="actions" aria-label="Chinese character suggestions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px"></div>
   <p id="capPinyinHelp" class="muted" aria-live="polite">Suggestions come from your dictionary and common characters. Check each choice against the photograph.</p>
   </div>
@@ -74,7 +75,7 @@ function captureRender(){
   <label for="capKind">Save as</label><select id="capKind"><option value="character">Character</option><option value="expression">Expression</option><option value="sentence">Sentence</option></select>
   <label for="capExisting">Existing dictionary entry</label><select id="capExisting"><option value="">Select text first</option></select>
   <p id="capLookup" class="muted"></p><div class="fields">
-  <div><label for="capPinyin">Word pinyin (tone marks)</label><input id="capPinyin" placeholder="Check the reading in this context"></div>
+  <div><label for="capPinyin">Word pinyin (tone marks)</label><input id="capPinyin" placeholder="Check the reading in this context" aria-describedby="capToneHelp"><p id="capToneHelp" class="muted"><strong>Tones:</strong> 1 = ā (high and level) · 2 = á (rising) · 3 = ǎ (low, dipping) · 4 = à (falling). Put the number after each syllable: <strong>jiu3 yue4 → jiǔyuè</strong> (September). Use tone-mark pinyin in this field.</p></div>
   <div><label for="capMeaning">Word meaning in English</label><input id="capMeaning"></div>
   <div><label for="capMeaningFr">Word meaning in French (optional)</label><input id="capMeaningFr"></div>
   <div><label for="capSourcePinyin">Pinyin in this source context (optional)</label><input id="capSourcePinyin" placeholder="Confirm context-dependent readings"></div><div><label for="capTranslation">Source sentence translation (optional)</label><input id="capTranslation"></div>
