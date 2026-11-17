@@ -62,7 +62,7 @@ function captureRender(){
   <label for="capText">Recognized Chinese text — please check</label><textarea id="capText" class="chinese" lang="zh-Hans" spellcheck="false" rows="4"></textarea>
   <div class="pinyin-correction" style="margin:14px 0;padding:12px;border:1px solid #d7ded5;border-radius:12px">
   <label for="capPinyinCorrect">Correct with pinyin (keep your English keyboard)</label>
-  <p class="muted" style="margin:6px 0">Tap a wrong character in the text above, type pinyin below, then tap the correct Chinese character. For a missing character, place the cursor where it belongs.</p>
+  <p class="muted" style="margin:6px 0">Select a wrong character in the text above (long-press), type pinyin below, then tap the correct choice. To insert a missing character, place the cursor where it belongs.</p>
   <input id="capPinyinCorrect" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. wu, wu3, xia, xia4">
   <div id="capPinyinChoices" class="actions" aria-label="Chinese character suggestions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px"></div>
   <p id="capPinyinHelp" class="muted" aria-live="polite">Suggestions come from your dictionary and common characters. Check each choice against the photograph.</p>
@@ -293,16 +293,13 @@ function captureOfferPinyin(){
     button.style.cssText='font-size:27px;min-width:46px;min-height:46px;padding:5px 10px;border:1px solid #cbd5c7;border-radius:9px;background:#f3faf0;color:#17251b';
     button.onclick=()=>captureInsertCorrection(ch);root.append(button);
   }
-  help.textContent='Tap a candidate to replace the selected character or insert at the cursor. Confirm the corrected sentence afterward.';
+  help.textContent='Select a character in the OCR text to replace it, or put the cursor where you want to insert. Then tap a candidate. Confirm the corrected sentence afterward.';
 }
 function captureInsertCorrection(ch){
   const field=cap('capText');if(!field)return;
   const old=field.value;let {start,end}=captureCorrectionCursor;
   start=Math.max(0,Math.min(start,old.length));end=Math.max(start,Math.min(end,old.length));
-  // A tap without selection corrects the character directly after the caret.
-  // At end of text, insert a missing character instead.
-  if(start===end&&start<old.length&&/[\u3400-\u9fff]/u.test(old[start]))end=start+1;
-  field.value=old.slice(0,start)+ch+old.slice(end);
+  //   field.value=old.slice(0,start)+ch+old.slice(end);
   const next=start+ch.length;field.focus();field.setSelectionRange(next,next);
   captureCorrectionCursor={start:next,end:next};
   captureSession.edit(field.value);captureSelection=null;captureLastIndex=null;captureUpdateVerified();captureQueueDraft();
