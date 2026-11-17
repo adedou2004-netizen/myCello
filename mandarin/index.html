@@ -76,6 +76,7 @@ dialog::backdrop{background:#0008}
 .camfull .box{height:28%}
 .cambar{display:flex;gap:10px;justify-content:center;align-items:center;padding:14px;background:#111}
 #writer{width:min(82vw,320px);height:min(82vw,320px);margin:12px auto;border:2px solid #E5E5E5;border-radius:16px;background:#fff}
+#dictForm label{display:block;margin:12px 0 6px}#dictForm input{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:10px;border:2px solid var(--line);border-radius:12px}#dictForm .row{margin-top:16px}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 </head>
@@ -93,7 +94,7 @@ dialog::backdrop{background:#0008}
 <dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a Memory Palace card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script src="./capture-core.js"></script>
+<script src="./capture-core.js?v=20261117-review1"></script>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
 const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
@@ -281,7 +282,7 @@ function deleteLesson(id){
 }
 function openLesson(id){
   const l=db.lessons.find(x=>x.id===id); if(!l) return;
-  lessonQueue=l.items.slice(); lessonAt=0; tab="lesson";
+  study=null;lessonQueue=l.items.slice(); lessonAt=0; tab="lesson";
   $("#title").textContent=l.title; $("#subtitle").textContent="Practice this lesson. Due date is ignored.";
   showLesson();
 }
@@ -293,13 +294,43 @@ function showLesson(){
 }
 function renderCapture(){captureRender();}
 function stopPreview(){if(typeof captureLeave==='function') captureLeave();}
+let dictionaryFilter='all';
 function renderLibrary(){
-  const q=($("#libQ")&&$("#libQ").value||"").toLowerCase();
-  const list=db.entries.filter(e=>(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.type||"")).toLowerCase().includes(q));
-  $("#app").innerHTML=`<input id="libQ" placeholder="Search the dictionary" value="${escapeHTML(q)}"><div style="height:8px"></div><p class="muted">Showing ${list.length} of ${db.entries.length}. Lessons are lists. This is the full dictionary.</p>`+list.map(e=>`<button class="listbtn card" data-open="${e.id}"><strong style="font-size:28px">${escapeHTML(e.simplified)}</strong> ${e.traditional&&e.traditional!==e.simplified?e.traditional:""}<div class="muted">${escapeHTML(e.type||"character")} · ${escapeHTML(e.pinyin||"no pinyin")} · ${escapeHTML(french(e.pinyin))} · ${escapeHTML(e.meaning||"no meaning yet")}</div></button>`).join("")+`<p class="muted">${db.entries.length} in the dictionary. No duplicates.</p>`;
-  $("#libQ").oninput=renderLibrary;
-  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{study=b.dataset.open; select("today")});
+  const q=($("#libQ")?.value||"").toLowerCase();
+  const pending=db.entries.filter(e=>CaptureCore.needsDictionaryReview(db,e));
+  const list=db.entries.filter(e=>(dictionaryFilter!=='pending'||pending.includes(e))&&(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.meaning_fr||"")).toLowerCase().includes(q));
+  $("#app").innerHTML=`<div class="card"><p class="muted">Personal dictionary · saved on this device. Export a backup in Capture to keep a copy. Account sync is not available.</p><div class="row"><button id="dictAll" aria-pressed="${dictionaryFilter==='all'}">All words (${db.entries.length})</button><button id="dictPending" aria-pressed="${dictionaryFilter==='pending'}">Needs review (${pending.length})</button></div><p class="muted">Check captured words here. Dictionary review does not change SRS progress.</p></div><label for="libQ">Search your dictionary</label><input id="libQ" placeholder="Character, pinyin or meaning" value="${escapeHTML(q)}"><p class="muted">Showing ${list.length} words.</p>`+list.map(e=>`<button class="listbtn card" data-open="${escapeHTML(e.id)}"><strong lang="zh-Hans" style="font-size:40px">${escapeHTML(e.simplified)}</strong> ${e.traditional&&e.traditional!==e.simplified?escapeHTML(e.traditional):""}<div class="muted">${escapeHTML(e.type||"character")} · ${escapeHTML(e.pinyin||"pinyin missing")} · ${escapeHTML(french(e.pinyin))} · ${escapeHTML(e.meaning||"meaning missing")}</div>${pending.includes(e)?'<div>Needs review</div>':''}</button>`).join('')+(list.length?'':'<p>No words in this list.</p>');
+  $("#libQ").oninput=()=>{const pos=$("#libQ").selectionStart;renderLibrary();$("#libQ").focus();$("#libQ").setSelectionRange(pos,pos)};
+  $("#dictAll").onclick=()=>{dictionaryFilter='all';renderLibrary()};
+  $("#dictPending").onclick=()=>{dictionaryFilter='pending';renderLibrary()};
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openDictionaryEntry(b.dataset.open));
 }
+function openDictionaryEntry(id){
+  select('library');study=id;
+  const e=entry(id);if(!e)return;
+  $("#title").textContent="Dictionary review";
+  $("#subtitle").textContent="Check your saved word and its source.";
+  $("#app").innerHTML=`<button id="dictBack">Back to dictionary</button>`+card(e,'')+`<div class="card"><h2>Personal dictionary entry</h2><form id="dictForm"><label for="dictPinyin">Pinyin with tone marks</label><input id="dictPinyin" value="${escapeHTML(e.pinyin||'')}" required><label for="dictMeaning">English meaning</label><input id="dictMeaning" value="${escapeHTML(e.meaning||'')}" required><label for="dictFrench">French meaning (optional)</label><input id="dictFrench" value="${escapeHTML(e.meaning_fr||'')}"><div class="row"><button id="dictSave" type="button">Save changes</button><button type="submit" class="primary">Save and mark reviewed</button></div><p id="dictStatus" role="status" aria-live="polite">${CaptureCore.needsDictionaryReview(db,e)?'Needs review':'Reviewed'} · saved on this device.</p></form></div><div class="card"><h2>Saved source context</h2>${examplesFor(id).map(x=>`<p lang="zh-Hans" style="font-size:28px;white-space:pre-wrap">${escapeHTML(x.surface)}</p><p>${escapeHTML(x.meaning||'')}</p><p class="muted">${escapeHTML(x.source||'')} ${escapeHTML(x.note||'')}</p>`).join('')||'<p>No source context saved.</p>'}</div>`;
+  bindCard();
+  $("#dictBack").onclick=()=>{study=null;select('library')};
+  function commitReview(reviewed){
+    try{
+      const next=JSON.parse(JSON.stringify(db)),target=next.entries.find(x=>x.id===id);
+      if(!target)throw Error('This word no longer exists.');
+      const py=$("#dictPinyin").value.trim(),meaning=$("#dictMeaning").value.trim(),fr=$("#dictFrench").value.trim();
+      if(reviewed&&(!py||!meaning))throw Error('Add pinyin and an English meaning before marking reviewed.');
+      const changed=target.pinyin!==py||target.meaning!==meaning||target.meaning_fr!==fr;
+      Object.assign(target,{pinyin:py,meaning,meaning_fr:fr});
+      if(reviewed)target.dictionaryReview='reviewed';
+      else if(changed)target.dictionaryReview='pending';
+      captureCommit(next);
+      $("#dictStatus").textContent='Saved on this device. '+(CaptureCore.needsDictionaryReview(db,target)?'Still in Needs review.':'Marked reviewed.');
+    }catch(error){$("#dictStatus").textContent='Not saved: '+error.message;}
+  }
+  $("#dictSave").onclick=()=>commitReview(false);
+  $("#dictForm").onsubmit=event=>{event.preventDefault();commitReview(true)};
+}
+
 let quizMode="listen";
 let speakRecorder=null,speakStream=null,speakChunks=[],speakAudioUrl=null,speakAudio=null;
 let speakLevelContext=null,speakLevelFrame=null;
@@ -563,7 +594,7 @@ async function loadRemotePalace(){
   }catch(e){}
 }
 function select(which){
-  stopSpeechListening();
+  study=null;stopSpeechListening();
   tab=which;
   document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===which)));
   const titles={today:["Today","Due cards with Memory Aid, My Memory Palace and examples."],lessons:["Lessons","Course lists and book lists. Tap one to practice it."],capture:["Capture","Save once, then link it to a lesson."],library:["Library","The dictionary. Each character exists once."],quiz:["Quiz","Hear it, then match the character."]};
@@ -579,6 +610,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.datase
 select("today"); remotePalaceReady=loadRemotePalace();
 if(storageLoadError){const warning=document.createElement('p');warning.setAttribute('role','alert');warning.textContent='Your saved dictionary could not be read. Existing data has not been overwritten. Open Capture → Backup and recovery to restore a backup.';document.querySelector('header').append(warning);}
 </script>
-<script src="./capture.js"></script>
+<script src="./capture.js?v=20261117-review1"></script>
 </body>
 </html>
+

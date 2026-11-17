@@ -69,6 +69,7 @@
     for(const [key,value] of [['pinyin',input.pinyin],['meaning',input.meaning],['meaning_fr',input.meaningFr]]){
       if(!normalize(target[key])&&normalize(value))target[key]=normalize(value);
     }
+    target.dictionaryReview='pending';
     const lesson=next.lessons.find(l=>l.id===input.lessonId);
     if(input.lessonId&&!lesson) throw Error('That lesson no longer exists. Choose another.');
     if(lesson&&!lesson.items.includes(target.id)) lesson.items.push(target.id);
@@ -85,7 +86,13 @@
     database.lessonPractice=database.lessonPractice||{};database.lessonPractice[id]=old;
     if(e.srsEligible===false){e.practicePasses=old.passes;if(old.passes>=3){e.srsEligible=true;e.status='review';database.reviews[id]={strength:2.5,interval:1,streak:3,next:Date.now()+86400000};}}
   }
-  const api={normalize,han,chars,clamp,cropPixels,point,moveCrop,textScale,Session,validateDB,saveVocabulary,practice};
+  function needsDictionaryReview(database,entry){
+    if(!normalize(entry.pinyin)||!normalize(entry.meaning))return true;
+    if(entry.dictionaryReview)return entry.dictionaryReview!=='reviewed';
+    return database.examples.some(x=>x.entryId===entry.id&&['photo','manual'].includes(x.sourceType));
+  }
+  const api={normalize,han,chars,clamp,cropPixels,point,moveCrop,textScale,Session,validateDB,saveVocabulary,practice,needsDictionaryReview};
   if(typeof module!=='undefined'&&module.exports) module.exports=api; else root.CaptureCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
+
 

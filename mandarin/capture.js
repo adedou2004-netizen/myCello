@@ -370,8 +370,8 @@ async function captureSave(){
   if(captureSaving||!captureSession.verified||!captureSelection)return;captureSaving=true;captureUpdateSave();
   try{
     captureCollect();const result=C.saveVocabulary(db,{verified:captureSession.verified,text:captureSelection.text,surface:captureSession.text,start:captureSelection.start,end:captureSelection.end,kind:cap('capKind').value,existingId:cap('capExisting').value,pinyin:cap('capPinyin').value,meaning:cap('capMeaning').value,meaningFr:cap('capMeaningFr').value,translation:cap('capTranslation').value,sourcePinyin:cap('capSourcePinyin').value,sourceTitle:cap('capSource').value,note:cap('capNote').value,lessonId:cap('capLesson').value,origin:captureOrigin},captureId);
-    captureCommit(result.next);const lesson=db.lessons.find(l=>l.id===cap('capLesson').value);captureMessage((result.existed?'Updated existing entry. ':'Saved new entry. ')+result.target.simplified+' · '+(result.target.pinyin||'pinyin missing')+' · '+(result.target.meaning||'English meaning missing')+' — '+(lesson?'saved to lesson: '+lesson.title:'saved to Dictionary only (no lesson selected)')+'.');
-    const button=document.createElement('button');button.textContent='Open saved entry';button.onclick=()=>{study=result.target.id;select('today');};cap('capSaved').replaceChildren(button);
+    captureCommit(result.next);const lesson=db.lessons.find(l=>l.id===cap('capLesson').value);captureMessage((result.existed?'Updated existing entry. ':'Saved new entry. ')+result.target.simplified+' · '+(result.target.pinyin||'pinyin missing')+' · '+(result.target.meaning||'English meaning missing')+' — '+(lesson?'saved to lesson: '+lesson.title:'saved to Dictionary only (no lesson selected)')+'. Saved on this device and added to Dictionary → Needs review.');
+    const button=document.createElement('button');button.textContent='Open saved entry';button.onclick=()=>openDictionaryEntry(result.target.id);const review=document.createElement('button');review.textContent='Dictionary · Needs review';review.onclick=()=>{dictionaryFilter='pending';select('library');};cap('capSaved').replaceChildren(button,review);
     await capturePersistDraft().catch(()=>{});
   }catch(e){captureMessage('Not saved: '+e.message+'. Your corrected text is still here.',true);}
   finally{captureSaving=false;captureUpdateSave();}
@@ -395,5 +395,6 @@ function captureLeave(){
 }
 window.addEventListener('pagehide',()=>{if(captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
+
 
 

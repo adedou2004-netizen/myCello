@@ -66,3 +66,35 @@ test('existing pinyin and meaning remain protected while missing French can be c
  const a=app();manual(a,'她');a.run('captureSetSelection(0,1)');assert.equal(a.$('capPinyin').readOnly,true);assert.equal(a.$('capMeaning').readOnly,true);assert.equal(a.$('capMeaningFr').readOnly,false);
  a.$('capMeaningFr').value='elle';a.$('capSave').click();await tick();assert.equal(a.run("db.entries.find(e=>e.simplified==='她').meaning_fr"),'elle');assert.match(a.$('capStatus').textContent,/Dictionary only/);a.dom.window.close();
 });
+
+
+test('capture saves personal entry, opens exact word, and persists dictionary review independently of SRS',async()=>{
+ const a=app();manual(a,'九月');a.run('captureSetSelection(0,2)');a.$('capPinyin').value='jiǔyuè';a.$('capMeaning').value='September';a.$('capSave').click();await tick();
+ assert.match(a.$('capStatus').textContent,/Saved on this device/);
+ const saved=JSON.parse(a.w.localStorage.getItem('mandarinAppV2'));const e=saved.entries.find(x=>x.simplified==='九月');assert.equal(e.dictionaryReview,'pending');
+ a.w.document.querySelector('#capSaved button').click();assert.equal(a.$('dictPinyin').value,'jiǔyuè');assert.match(a.$('app').textContent,/九月/);assert.equal(a.run('currentEntry().id'),e.id);
+ a.$('dictFrench').value='septembre';a.$('dictForm').dispatchEvent(new a.w.Event('submit',{cancelable:true}));
+ assert.match(a.$('dictStatus').textContent,/Marked reviewed/);
+ const after=JSON.parse(a.w.localStorage.getItem('mandarinAppV2'));assert.equal(after.entries.find(x=>x.id===e.id).meaning_fr,'septembre');assert.equal(after.entries.find(x=>x.id===e.id).srsEligible,false);assert.deepEqual(after.reviews,saved.reviews);
+ const b=app(after);b.run("dictionaryFilter='pending';select('library')");assert.equal([...b.w.document.querySelectorAll('[data-open]')].some(x=>x.dataset.open===e.id),false);
+ b.run(`openDictionaryEntry('${e.id}')`);assert.equal(b.$('dictMeaning').value,'September');assert.equal(b.$('dictFrench').value,'septembre');
+ a.dom.window.close();b.dom.window.close();
+});
+test('dictionary review recovers legacy captures and incomplete entries and refuses incomplete approval',()=>{
+ const a=app();a.run("db.entries.push({id:'legacy',simplified:'九月',pinyin:'jiǔyuè',meaning:'September',srsEligible:false},{id:'missing',simplified:'工作',pinyin:'',meaning:''});db.examples.push({entryId:'legacy',surface:'九月',sourceType:'manual'});dictionaryFilter='pending';select('library')");
+ assert.equal(a.w.document.querySelectorAll('[data-open]').length,2);
+ a.run("openDictionaryEntry('missing')");a.$('dictForm').dispatchEvent(new a.w.Event('submit',{cancelable:true}));assert.match(a.$('dictStatus').textContent,/Not saved/);assert.notEqual(a.run("entry('missing').dictionaryReview"),'reviewed');a.dom.window.close();
+});
+test('failed dictionary review save preserves stored and in-memory entry',()=>{
+ const a=app();a.run("openDictionaryEntry('s0')");const before=a.run('JSON.stringify(db)');const stored=a.w.localStorage.getItem('mandarinAppV2');
+ a.$('dictMeaning').value='changed';a.w.Storage.prototype.setItem=function(){throw Error('Storage full');};a.$('dictSave').click();assert.match(a.$('dictStatus').textContent,/Not saved/);assert.equal(a.run('JSON.stringify(db)'),before);assert.equal(a.w.localStorage.getItem('mandarinAppV2'),stored);a.dom.window.close();
+});
+test('review editing preserves lesson links, examples and existing SRS history; recapture requeues same entry',async()=>{
+ const a=app();a.run("db.entries.find(e=>e.simplified==='她').dictionaryReview='reviewed';db.reviews.s23={next:123,strength:4,interval:5,streak:7};");
+ const before=a.run('JSON.stringify(db.reviews)');manual(a,'她');a.run('captureSetSelection(0,1)');a.$('capSave').click();await tick();assert.equal(a.run("db.entries.filter(e=>e.simplified==='她').length"),1);assert.equal(a.run("db.entries.find(e=>e.simplified==='她').dictionaryReview"),'pending');
+ const state=a.run('JSON.stringify([db.lessons,db.examples])');a.run("openDictionaryEntry(db.entries.find(e=>e.simplified==='她').id)");a.$('dictForm').dispatchEvent(new a.w.Event('submit',{cancelable:true}));assert.equal(a.run('JSON.stringify(db.reviews)'),before);assert.equal(a.run('JSON.stringify([db.lessons,db.examples])'),state);a.dom.window.close();
+});
+test('dictionary review detects other-tab saves and navigation keeps lesson grading on lesson word',()=>{
+ const a=app();a.run("openDictionaryEntry('s0')");a.w.localStorage.setItem('mandarinAppV2','{"newTab":true}');a.$('dictMeaning').value='changed';a.$('dictSave').click();assert.match(a.$('dictStatus').textContent,/another tab/);assert.equal(a.run("entry('s0').meaning"),'one');
+ a.run("select('lessons');openLesson('L2')");a.w.localStorage.removeItem('mandarinAppV2');a.run('storageBaseline=null');const id=a.run('lessonQueue[0]');a.w.document.querySelector('[data-act="next"]').click();assert.equal(a.run(`db.lessonPractice['${id}'].passes`),1);assert.equal(a.run('db.lessonPractice.s0'),undefined);a.dom.window.close();
+});

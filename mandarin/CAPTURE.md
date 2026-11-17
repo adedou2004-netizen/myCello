@@ -43,3 +43,12 @@ The cloud browser could not connect to the local preview, so no visual/browser-c
 - Reload/draft restoration with real Blob storage, storage exhaustion, backup download/restore and existing vocabulary preservation.
 
 OCR remains fallible. A cloud-engine comparison is deferred unless the corrected pipeline fails the real-photo benchmark. No cloud service was provisioned or charged.
+
+
+## Personal dictionary review
+
+Every Capture save commits `dictionaryReview: "pending"` on the canonical dictionary entry in the same localStorage snapshot as vocabulary, source context and lesson links. Recapturing an existing word requeues that entry without duplicating it. Library offers All words and Needs review filters. Missing pinyin/English meanings and legacy captured examples (photo/manual sourceType) also appear without a destructive migration.
+
+Open saved entry and dictionary rows open the selected word directly, independent of Today SRS. Review allows editing pinyin, English and optional French, with the saved source context visible. Save changes keeps edited entries pending; Save and mark reviewed requires pinyin and English, persists `dictionaryReview: "reviewed"`, and does not change SRS eligibility, history, lesson links, or practice passes. Conflicting tabs and storage failures use the same atomic save guard as Capture. Backups preserve the review field with all other entry metadata.
+
+The UI explicitly says saved on this device. This is browser-local personal data, not authenticated account storage or cross-device synchronization. No private vocabulary is sent to Supabase or the shared card index by this feature.
