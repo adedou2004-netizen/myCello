@@ -108,7 +108,7 @@ function captureRender(){
 function captureShowState(){
   if(!captureMounted)return;
   cap('capCropPanel').classList.toggle('hidden',!capturePhoto);
-  cap('capReview').classList.toggle('hidden',!capturePhoto&&!captureSession.text&&captureOrigin!=='manual');
+  cap('capReview').classList.toggle('hidden',!captureSession.text&&!captureSession.raw&&captureOrigin!=='manual');
   cap('capText').value=captureSession.text;
   for(const [name,value] of Object.entries(captureForm))if(cap(name))cap(name).value=value;
   if(capturePhoto)captureDisplayPhoto();
@@ -129,8 +129,27 @@ function captureStopCamera(){
   if(cap('capCamera'))cap('capCamera').classList.add('hidden');
   if(cap('capShutter'))cap('capShutter').classList.add('hidden');
 }
+function captureReset(){
+  captureCancel();captureSession.clear();capturePreviewEpoch++;
+  capturePhoto=null;captureCropBlob=null;captureCrop={x:0,y:0,w:1,h:1};
+  captureSelection=null;captureLastIndex=null;captureForm={};captureResume=null;captureRange=false;captureOrigin='photo';
+  captureCorrectionCursor={start:0,end:0};captureDiagnostic={};
+  for(const url of [capturePhotoURL,captureCropURL])if(url)URL.revokeObjectURL(url);
+  capturePhotoURL='';captureCropURL='';
+  for(const id of ['capPhoto','capCropPreview']){cap(id).onload=null;cap(id).removeAttribute('src');}
+  for(const id of ['capCropPanel','capReview','capRecover','capSavePanel'])cap(id).classList.add('hidden');
+  for(const id of ['capText','capPinyinCorrect','capPinyin','capMeaning','capMeaningFr','capTranslation','capSourcePinyin','capSource','capNote']){cap(id).value='';cap(id).readOnly=false;}
+  for(const id of ['capPinyinChoices','capTokens','capSelected','capLookup'])cap(id).replaceChildren();
+  cap('capExisting').innerHTML='<option value="">Select text first</option>';
+  cap('capLesson').value='';cap('capKind').value='character';
+  cap('capRange').setAttribute('aria-pressed','false');cap('capRange').textContent='Select range';
+  cap('capProgress').value=0;cap('capCameraStatus').textContent='';
+  captureClearSaved();captureMessage('');captureDebug();captureBusy(false);captureUpdateVerified();
+  // Invalidate queued draft writes synchronously; delete after any write already in flight.
+  captureDeleteDraft().catch(()=>captureMessage('Could not clear the previous recovery draft.',true));
+}
 async function captureOpenCamera(){
-  captureStopCamera();const epoch=captureCameraEpoch;
+  captureStopCamera();captureReset();const epoch=captureCameraEpoch;
   if(!navigator.mediaDevices?.getUserMedia){captureMessage('Camera is unavailable. Choose an image or enter text manually.',true);return;}
   cap('capCameraStatus').textContent='Opening camera…';
   try{
@@ -144,12 +163,12 @@ async function captureOpenCamera(){
 function captureCanvasBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('Could not create the image.')),'image/png'));}
 async function captureShutter(){
   const v=cap('capVideo');if(!v?.videoWidth||v.readyState<2){captureMessage('The camera is not ready yet. Try again.',true);return;}
-  captureCancel();captureSession.clear();captureSelection=null;captureLastIndex=null;captureCropBlob=null;capturePreviewEpoch++;captureUpdateVerified();cap('capText').value='';cap('capCropPanel').classList.add('hidden');captureClearSaved();const token=captureSession.revision;
+  captureReset();const token=captureSession.revision;
   try{const canvas=document.createElement('canvas');canvas.width=v.videoWidth;canvas.height=v.videoHeight;canvas.getContext('2d').drawImage(v,0,0);const blob=await captureCanvasBlob(canvas);if(!captureMounted||token!==captureSession.revision)return;await captureAcceptPhoto(blob);captureStopCamera();}catch(e){captureMessage(e.message,true);}
 }
 async function captureReadFile(file){
   // ImageBitmap applies EXIF orientation once; storing the normalized PNG avoids double rotation.
-  captureCancel();captureSession.clear();captureSelection=null;captureLastIndex=null;captureCropBlob=null;capturePreviewEpoch++;captureUpdateVerified();cap('capText').value='';cap('capCropPanel').classList.add('hidden');captureClearSaved();const token=captureSession.revision;
+  captureReset();const token=captureSession.revision;
   captureMessage('Opening image…');
   try{
     const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
@@ -203,11 +222,9 @@ async function captureRotate(){
   try{const bitmap=await createImageBitmap(capturePhoto);const canvas=document.createElement('canvas');canvas.width=bitmap.height;canvas.height=bitmap.width;const ctx=canvas.getContext('2d');ctx.translate(canvas.width,0);ctx.rotate(Math.PI/2);ctx.drawImage(bitmap,0,0);bitmap.close();const blob=await captureCanvasBlob(canvas);if(!captureMounted||token!==captureSession.revision)return;capturePhoto=blob;captureChangeCrop({x:0,y:0,w:1,h:1});captureDisplayPhoto();}catch(e){captureMessage('Could not rotate the image.',true);}
 }
 function captureClearSaved(){if(cap('capSaved'))cap('capSaved').replaceChildren();}
-async function captureRetake(){
-  if(captureSession.text&&!confirm('Start a new capture? The current text draft will be replaced.'))return;
-  captureCancel();captureSession.clear();capturePhoto=null;capturePreviewEpoch++;captureCropBlob=null;captureSelection=null;captureLastIndex=null;captureForm={};
-  if(capturePhotoURL)URL.revokeObjectURL(capturePhotoURL);if(captureCropURL)URL.revokeObjectURL(captureCropURL);capturePhotoURL='';captureCropURL='';
-  cap('capCropPanel').classList.add('hidden');cap('capReview').classList.add('hidden');cap('capText').value='';captureClearSaved();await captureDeleteDraft().catch(()=>{});captureOpenCamera();
+function captureRetake(){
+  captureOpenCamera();
+  cap('capCameraStatus').scrollIntoView({block:'center',behavior:'smooth'});
 }
 function captureManual(){captureCancel();captureStopCamera();captureOrigin='manual';cap('capReview').classList.remove('hidden');cap('capText').focus();captureMessage('Enter Chinese text, then confirm it before saving.');captureQueueDraft();}
 function captureCancel(){
@@ -377,3 +394,4 @@ function captureLeave(){
 }
 window.addEventListener('pagehide',()=>{if(captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
+
