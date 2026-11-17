@@ -350,10 +350,10 @@ function captureSetSelection(start,end){
   cap('capSelected').textContent='Selected: '+text;cap('capKind').value=[...text].length===1?'character':/[。！？\n]/u.test(text)?'sentence':'expression';
   const candidates=db.entries.filter(e=>C.normalize(e.simplified)===C.normalize(text)||C.normalize(e.traditional)===C.normalize(text));
   cap('capExisting').innerHTML=candidates.length?candidates.map(e=>`<option value="${captureEsc(e.id)}">${captureEsc(e.simplified+' · '+(e.pinyin||'reading missing')+' · '+(e.meaning||'meaning missing'))}</option>`).join(''):'<option value="">New dictionary entry</option>';
-  cap('capLookup').textContent=candidates.length?'Existing entry will be reused. Its reading, meaning, and review history will be preserved.':'New entry: enter the reading and meaning if known. They can be left blank for later review.';
+  cap('capLookup').textContent=candidates.length?'Existing entry will be reused. Fill in any missing pinyin or meaning below; existing details and review history are preserved.':'New entry: enter the reading and meaning if known. They can be left blank for later review.';
   captureFillEntry();captureUpdateSave();captureQueueDraft();
 }
-function captureFillEntry(){const e=db.entries.find(e=>e.id===cap('capExisting').value);for(const [id,key] of [['capPinyin','pinyin'],['capMeaning','meaning'],['capMeaningFr','meaning_fr']]){cap(id).value=e?.[key]||'';cap(id).readOnly=!!e;}captureUpdateSave();}
+function captureFillEntry(){const e=db.entries.find(e=>e.id===cap('capExisting').value);for(const [id,key] of [['capPinyin','pinyin'],['capMeaning','meaning'],['capMeaningFr','meaning_fr']]){cap(id).value=e?.[key]||'';cap(id).readOnly=!!C.normalize(e?.[key]);}captureUpdateSave();}
 function captureUpdateSave(){if(cap('capSave'))cap('capSave').disabled=captureSaving||captureSession.busy||!captureSession.verified||!captureSelection||!C.han(captureSelection.text);}
 async function captureNewLesson(){
   const title=prompt('Name the lesson, for example Le Petit Prince 1');if(!C.normalize(title))return;
@@ -370,7 +370,7 @@ async function captureSave(){
   if(captureSaving||!captureSession.verified||!captureSelection)return;captureSaving=true;captureUpdateSave();
   try{
     captureCollect();const result=C.saveVocabulary(db,{verified:captureSession.verified,text:captureSelection.text,surface:captureSession.text,start:captureSelection.start,end:captureSelection.end,kind:cap('capKind').value,existingId:cap('capExisting').value,pinyin:cap('capPinyin').value,meaning:cap('capMeaning').value,meaningFr:cap('capMeaningFr').value,translation:cap('capTranslation').value,sourcePinyin:cap('capSourcePinyin').value,sourceTitle:cap('capSource').value,note:cap('capNote').value,lessonId:cap('capLesson').value,origin:captureOrigin},captureId);
-    captureCommit(result.next);captureMessage((result.existed?'Reused existing entry. ':'Saved new entry. ')+result.target.simplified+' — source text and lesson links saved on this device.');
+    captureCommit(result.next);const lesson=db.lessons.find(l=>l.id===cap('capLesson').value);captureMessage((result.existed?'Updated existing entry. ':'Saved new entry. ')+result.target.simplified+' · '+(result.target.pinyin||'pinyin missing')+' · '+(result.target.meaning||'English meaning missing')+' — '+(lesson?'saved to lesson: '+lesson.title:'saved to Dictionary only (no lesson selected)')+'.');
     const button=document.createElement('button');button.textContent='Open saved entry';button.onclick=()=>{study=result.target.id;select('today');};cap('capSaved').replaceChildren(button);
     await capturePersistDraft().catch(()=>{});
   }catch(e){captureMessage('Not saved: '+e.message+'. Your corrected text is still here.',true);}
@@ -395,4 +395,5 @@ function captureLeave(){
 }
 window.addEventListener('pagehide',()=>{if(captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&captureMounted){capturePersistDraft();captureStopCamera();captureCancel();}});
+
 
