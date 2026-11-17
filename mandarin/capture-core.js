@@ -65,6 +65,10 @@
       target={id:id(),simplified:text,traditional:'',pinyin:normalize(input.pinyin),meaning:normalize(input.meaning),meaning_fr:normalize(input.meaningFr),sound:'',type:kind,status:'new',source:input.origin||'photo',srsEligible:false,practicePasses:0};
       next.entries.unshift(target);
     }
+    // Reuse vocabulary and reviews while completing genuinely missing metadata.
+    for(const [key,value] of [['pinyin',input.pinyin],['meaning',input.meaning],['meaning_fr',input.meaningFr]]){
+      if(!normalize(target[key])&&normalize(value))target[key]=normalize(value);
+    }
     const lesson=next.lessons.find(l=>l.id===input.lessonId);
     if(input.lessonId&&!lesson) throw Error('That lesson no longer exists. Choose another.');
     if(lesson&&!lesson.items.includes(target.id)) lesson.items.push(target.id);
@@ -84,3 +88,4 @@
   const api={normalize,han,chars,clamp,cropPixels,point,moveCrop,textScale,Session,validateDB,saveVocabulary,practice};
   if(typeof module!=='undefined'&&module.exports) module.exports=api; else root.CaptureCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
+
