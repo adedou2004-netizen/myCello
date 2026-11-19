@@ -6,13 +6,16 @@ const wordInput = byId("word");
 const image = byId("preview-image");
 const stage = byId("stage");
 const editor = byId("mnemonic-dialog");
-const localAddress = new Set(["http://127.0.0.1:8765", "http://localhost:8765"]);
+const localAddress = location.protocol === "http:" && ["localhost", "127.0.0.1"].includes(location.hostname);
 let connected = false;
 let engineSession = null;
 let busy = false;
 let options = [];
 let preview = null;
 let imageUrl = null;
+let singleAuto = true;
+let singleResearched = false;
+let singleIllustrated = false;
 
 function step(id, state, message) {
   const status = byId(id + "-state");
@@ -34,7 +37,9 @@ function currentPreview() {
 }
 
 function buttons() {
+  document.querySelectorAll('[name="research-mode"]').forEach(radio => { radio.disabled = busy; });
   byId("create").disabled = busy || !connected;
+  byId("research-only").disabled = busy || !connected;
   byId("manual-create").disabled = busy || !connected;
   byId("regenerate").disabled = busy || !connected || !fields.elements.namedItem("scene").value.trim();
   byId("edit-mnemonic").disabled = busy || !fields.elements.namedItem("mnemonic").value.trim();
@@ -42,6 +47,10 @@ function buttons() {
   byId("senses").disabled = busy;
   fields.toggleAttribute("inert", busy);
   byId("reconnect").disabled = busy;
+  byId("generate-approved").hidden = !singleResearched || Boolean(imageUrl && !byId("jump-preview").hidden);
+  byId("generate-approved").disabled = busy || !connected;
+  byId("regenerate").hidden = singleResearched && !singleIllustrated;
+  if (typeof updateLessonButtons === "function") updateLessonButtons();
 }
 
 function connection(state, label) {
@@ -49,12 +58,12 @@ function connection(state, label) {
   byId("connection").dataset.state = state;
   byId("connection-label").textContent = label;
   byId("launch").hidden = state !== "error";
-  byId("reconnect").hidden = state !== "error" || !localAddress.has(location.origin);
+  byId("reconnect").hidden = state !== "error" || !localAddress;
   buttons();
 }
 
 async function checkConnection() {
-  if (!localAddress.has(location.origin)) {
+  if (!localAddress) {
     connection("error", "Open on this PC");
     feedback("error", "Open the studio from Start Generator.cmd to create a card.");
     return;
@@ -71,6 +80,7 @@ async function checkConnection() {
     }
     engineSession = health.session;
     connection("success", "Local engine connected");
+    if (typeof loadLessons === "function") void loadLessons();
     const message = health.research ? "Research a word to create your own preview."
       : "Research data is missing. Restart with Start Generator.cmd while connected, or use Manual card details.";
     feedback(health.research ? "idle" : "error", message);
@@ -131,7 +141,10 @@ function showResearch(option) {
   byId("result-meaning").textContent = [option.fields["English meaning"], option.fields["French meaning"]].filter(Boolean).join(" · ");
   byId("result-traditional").textContent = option.traditional !== option.fields.headword ? "Traditional: " + option.traditional : "";
   byId("history").textContent = option.fields.history || "No historical note is available in the local source.";
+  byId("research-example").textContent = [option.fields["example Chinese"], option.fields["example pinyin"], option.fields["example English"]]
+    .filter(Boolean).join(" · ") || "No matching example. Add one in Manual card details before creating the image.";
   byId("mnemonic-copy").textContent = option.fields.mnemonic;
+  byId("mnemonic-kind").textContent = option.mnemonicKind || "Invented memory aid";
   const list = byId("characters");
   list.replaceChildren(...option.characters.map(character => {
     const row = document.createElement("div");
@@ -146,14 +159,47 @@ function showResearch(option) {
     const info = document.createElement("span");
     info.textContent = [character.layout, ...character.roles].filter(Boolean).join(" · ") || "No component breakdown in the local source.";
     copy.append(title, info);
+    if (character.evidence) {
+      const evidence = document.createElement("span");
+      evidence.textContent = character.evidence;
+      copy.append(evidence);
+    }
     row.append(glyph, copy);
     return row;
   }));
 }
 
+function showSources(sources) {
+  byId("sources").replaceChildren(...Object.entries(sources).map(([name, url]) => {
+    const source = document.createElement("a");
+    source.href = url;
+    source.target = "_blank";
+    source.rel = "noopener noreferrer";
+    source.textContent = name;
+    return source;
+  }));
+}
+
+function clearResearch() {
+  fields.reset();
+  byId("results").hidden = true;
+  byId("research-empty").hidden = false;
+  byId("mnemonic-copy").textContent = "Research a word to draft a memory cue and illustration scene.";
+  byId("mnemonic-kind").textContent = "";
+}
+
+function showCardImage(url, title) {
+  if (imageUrl) URL.revokeObjectURL(imageUrl);
+  imageUrl = url.startsWith("blob:") ? url : null;
+  image.src = url;
+  image.alt = title;
+  byId("full-size").href = url;
+}
+
 async function illustrate(reuse = false) {
   const data = formValues();
   const previous = preview;
+  singleIllustrated = true;
   markDraft();
   step("illustration", "running", reuse ? "Updating card text" : "Generating locally");
   stage.dataset.state = "running";
@@ -191,16 +237,16 @@ async function illustrate(reuse = false) {
 byId("research-form").addEventListener("submit", event => {
   event.preventDefault();
   const word = wordInput.value.trim();
+  singleAuto = event.submitter?.id !== "research-only";
   void task(async () => {
     markDraft();
     preview = null;
     options = [];
+    singleResearched = false;
+    singleIllustrated = false;
     byId("jump-preview").hidden = true;
-    fields.reset();
-    byId("results").hidden = true;
-    byId("research-empty").hidden = false;
+    clearResearch();
     byId("research-error").hidden = true;
-    byId("mnemonic-copy").textContent = "Research a word to draft a memory cue and illustration scene.";
     step("research", "running", "Looking up word");
     step("illustration", "idle", "Waiting for research");
     try {
@@ -209,15 +255,9 @@ byId("research-form").addEventListener("submit", event => {
       byId("senses").replaceChildren(...options.map((option, index) =>
         new Option(`${option.pinyin} — ${option.sense}`, index)));
       byId("senses-wrap").hidden = options.length < 2;
-      byId("sources").replaceChildren(...Object.entries(result.sources).map(([name, url]) => {
-        const source = document.createElement("a");
-        source.href = url;
-        source.target = "_blank";
-        source.rel = "noopener noreferrer";
-        source.textContent = name;
-        return source;
-      }));
+      showSources(options[0].sources || result.sources);
       showResearch(options[0]);
+      singleResearched = true;
       step("research", "success", "Research ready");
     } catch (error) {
       step("research", "error", "Research failed");
@@ -226,14 +266,30 @@ byId("research-form").addEventListener("submit", event => {
       feedback("error", error.message);
       return;
     }
-    await illustrate();
+    if (singleAuto) await illustrate();
+    else {
+      step("illustration", "idle", "Awaiting approval");
+      feedback("idle", "Review the research, then select Approve & Generate.");
+    }
   });
 });
 
 byId("senses").addEventListener("change", event => {
+  if (typeof isLessonMode === "function" && isLessonMode()) {
+    void lessonAction("select", {choice: Number(event.target.value)});
+    return;
+  }
   void task(async () => {
-    showResearch(options[Number(event.target.value)]);
-    await illustrate();
+    const draft = options[Number(event.target.value)];
+    showResearch(draft);
+    showSources(draft.sources || {});
+    if (!singleAuto) {
+      preview = null;
+      singleIllustrated = false;
+      byId("jump-preview").hidden = true;
+      markDraft();
+    }
+    if (singleAuto) await illustrate();
   });
 });
 
@@ -242,7 +298,11 @@ document.querySelectorAll("[data-word]").forEach(button => button.addEventListen
   wordInput.focus();
 }));
 
-fields.addEventListener("input", () => {
+fields.addEventListener("input", event => {
+  if (["mnemonic", "scene"].includes(event.target.name)) {
+    fields.elements.namedItem("mnemonic kind").value = "Invented memory aid";
+    byId("mnemonic-kind").textContent = "Invented memory aid";
+  }
   markDraft();
   byId("mnemonic-copy").textContent = fields.elements.namedItem("mnemonic").value;
   if (preview) feedback("idle", "Update the preview to apply the new details.");
@@ -251,13 +311,24 @@ fields.addEventListener("input", () => {
 
 fields.addEventListener("submit", event => {
   event.preventDefault();
+  if (typeof isLessonMode === "function" && isLessonMode()) {
+    void lessonAction("generate", {fields: formValues()});
+    return;
+  }
   void task(async () => {
     step("research", "success", "Manual details entered");
     await illustrate(Boolean(preview && !currentPreview() && preview.scene === formValues().scene));
   });
 });
 
-byId("regenerate").addEventListener("click", () => { void task(() => illustrate()); });
+byId("generate-approved").addEventListener("click", () => {
+  if (typeof isLessonMode === "function" && isLessonMode()) void lessonAction("generate", {fields: formValues()});
+  else void task(() => illustrate());
+});
+byId("regenerate").addEventListener("click", () => {
+  if (typeof isLessonMode === "function" && isLessonMode()) void lessonAction("regenerate", {fields: formValues()});
+  else void task(() => illustrate());
+});
 byId("reconnect").addEventListener("click", () => { void checkConnection(); });
 
 byId("edit-mnemonic").addEventListener("click", () => {
@@ -275,11 +346,24 @@ byId("mnemonic-form").addEventListener("submit", event => {
   editor.close();
   fields.elements.namedItem("mnemonic").value = mnemonic;
   fields.elements.namedItem("scene").value = scene;
+  fields.elements.namedItem("mnemonic kind").value = "Invented memory aid";
+  byId("mnemonic-kind").textContent = "Invented memory aid";
   byId("mnemonic-copy").textContent = mnemonic;
-  void task(() => illustrate(Boolean(preview && preview.scene === scene)));
+  if (typeof isLessonMode === "function" && isLessonMode()) {
+    void lessonAction("edit", {fields: formValues()});
+  } else if (preview) {
+    void task(() => illustrate(preview.scene === scene));
+  } else {
+    feedback("idle", "Mnemonic updated. Select Approve & Generate when ready.");
+    buttons();
+  }
 });
 
 byId("approve").addEventListener("click", () => {
+  if (typeof isLessonMode === "function" && isLessonMode()) {
+    void lessonAction("save");
+    return;
+  }
   if (!currentPreview()) return;
   void task(async () => {
     step("saving", "running", "Writing PNG");

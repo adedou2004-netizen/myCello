@@ -5,14 +5,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+import re
 from threading import Lock
 import traceback
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 from uuid import uuid4
 import webbrowser
 
-from cards import card_details, downloads_folder, render_card, save_card
+from cards import downloads_folder, render_card, save_card
+from lessons import Lessons, complete_card
 from research import download_research, research_ready, research_word
+from research_sources import install_supplements
 
 
 ROOT = Path(__file__).resolve().parent
@@ -78,12 +82,14 @@ class Illustrator:
 class Generator(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, output):
+    def __init__(self, output, *, lesson_root=None):
         super().__init__(ADDRESS, Handler)
         self.output = output
         self.session = uuid4().hex
         self.illustrator = Illustrator()
         self.lock = Lock()
+        self.image_lock = Lock()
+        self.lessons = Lessons(lesson_root or ROOT / "studio-data", output, self.illustrator, self.image_lock)
         self.preview = None
 
 
@@ -108,12 +114,27 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(HTTPStatus.FORBIDDEN, error="Open the generator using its loopback address.")
             return
         if self.path == "/health":
-            self.respond(HTTPStatus.OK, service="mylexigo-card-studio", research=research_ready(), session=self.server.session)
+            self.respond(HTTPStatus.OK, service="mylexigo-card-studio", research=research_ready(), session=self.server.session, lessons=True)
+            return
+        if self.path == "/lessons":
+            self.respond(HTTPStatus.OK, lessons=self.server.lessons.list())
+            return
+        lesson = re.fullmatch(r"/lesson/([0-9a-f]{32})(?:/image/([0-9a-f]{32}))?", urlsplit(self.path).path)
+        if lesson:
+            lesson_id, item_id = lesson.groups()
+            try:
+                if item_id:
+                    self.send_data(HTTPStatus.OK, self.server.lessons.image(lesson_id, item_id), "image/png")
+                else:
+                    self.respond(HTTPStatus.OK, **self.server.lessons.get(lesson_id))
+            except LookupError as error:
+                self.respond(HTTPStatus.NOT_FOUND, error=str(error))
             return
         pages = {
             "/": (ROOT / "interface.html", "text/html; charset=utf-8"),
             "/studio.css": (ROOT / "studio.css", "text/css; charset=utf-8"),
             "/studio.js": (ROOT / "studio.js", "text/javascript; charset=utf-8"),
+            "/lesson.js": (ROOT / "lesson.js", "text/javascript; charset=utf-8"),
             "/assets/mylexigo.webp": (ROOT / "assets/mylexigo.webp", "image/webp"),
             "/assets/example-card.webp": (ROOT / "assets/example-card.webp", "image/webp"),
             "/assets/feather.svg": (ROOT / "assets/feather.svg", "image/svg+xml"),
@@ -130,13 +151,14 @@ class Handler(BaseHTTPRequestHandler):
         if host not in LOCAL_HOSTS or self.headers.get("Origin") != f"http://{host}":
             self.respond(HTTPStatus.FORBIDDEN, error="Submit requests from the local generator page.")
             return
-        if self.path not in {"/research", "/preview", "/revise", "/save"}:
+        if self.path not in {"/research", "/preview", "/revise", "/save", "/lessons", "/lesson"}:
             self.respond(HTTPStatus.NOT_FOUND, error="Page unavailable.")
             return
         if self.headers.get_content_type() != "application/json":
             self.respond(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, error="Expected card data as JSON.")
             return
-        if not self.server.lock.acquire(blocking=False):
+        single = self.path in {"/preview", "/revise", "/save"}
+        if single and not self.server.lock.acquire(blocking=False):
             self.respond(HTTPStatus.CONFLICT, error="A card is already being generated or saved.")
             return
         try:
@@ -146,10 +168,14 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError("Expected a set of card fields.")
-            if self.path == "/research":
+            if self.path == "/lessons":
+                self.respond(HTTPStatus.CREATED, **self.server.lessons.create(data))
+            elif self.path == "/lesson":
+                self.respond(HTTPStatus.OK, **self.server.lessons.action(data))
+            elif self.path == "/research":
                 self.respond(HTTPStatus.OK, **research_word(data.get("word")))
             elif self.path in {"/preview", "/revise"}:
-                details = card_details(data)
+                details = complete_card(data)
                 if self.path == "/revise":
                     preview = self.server.preview
                     if preview is None or data.get("token") != preview.token:
@@ -157,7 +183,8 @@ class Handler(BaseHTTPRequestHandler):
                         return
                     art = preview.art
                 else:
-                    art = self.server.illustrator.draw(details["scene"])
+                    with self.server.image_lock:
+                        art = self.server.illustrator.draw(details["scene"])
                 png = render_card(details, art)
                 token = uuid4().hex
                 self.server.preview = Preview(token, details["filename"], art, png)
@@ -185,7 +212,8 @@ class Handler(BaseHTTPRequestHandler):
             message = str(error) if type(error) is RuntimeError else "The operation failed. See the generator window for details."
             self.respond(HTTPStatus.INTERNAL_SERVER_ERROR, error=message)
         finally:
-            self.server.lock.release()
+            if single:
+                self.server.lock.release()
 
 
 def download_model():
@@ -197,9 +225,11 @@ def download_model():
 
 
 def main():
+    global ADDRESS, HOST, ORIGIN, LOCAL_HOSTS
     parser = argparse.ArgumentParser(description="Run the Windows vocabulary card generator.")
     parser.add_argument("--download-model", action="store_true")
     parser.add_argument("--download-research", action="store_true")
+    parser.add_argument("--download-supplements", action="store_true")
     parser.add_argument("--open-browser", action="store_true")
     args = parser.parse_args()
     if args.download_model:
@@ -208,6 +238,20 @@ def main():
     if args.download_research:
         download_research()
         return
+    if args.download_supplements:
+        install_supplements()
+        return
+
+    port = 8765
+    current = studio_status(f"http://127.0.0.1:{port}")
+    if not (current or {}).get("lessons") and ((studio_status("http://127.0.0.1:8766") or {}).get("lessons") or current):
+        # Leave any unsaved work in the earlier studio available in its original tab.
+        port = 8766
+    ADDRESS = ("127.0.0.1", port)
+    HOST = f"{ADDRESS[0]}:{port}"
+    ORIGIN = f"http://{HOST}"
+    LOCAL_HOSTS = {HOST, f"localhost:{port}"}
+
     if args.open_browser and studio_running():
         webbrowser.open(f"{ORIGIN}/")
         return
@@ -232,11 +276,18 @@ def main():
 
 
 def studio_running():
+    return (studio_status(ORIGIN) or {}).get("lessons") is True
+
+
+def studio_status(origin):
     try:
-        with urlopen(f"{ORIGIN}/health", timeout=2) as response:
-            return json.load(response).get("service") == "mylexigo-card-studio"
+        with urlopen(f"{origin}/health", timeout=2) as response:
+            data = json.load(response)
+            if data.get("service") == "mylexigo-card-studio":
+                return data
     except (OSError, ValueError, AttributeError):
-        return False
+        pass
+    return None
 
 
 if __name__ == "__main__":

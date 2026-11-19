@@ -16,11 +16,20 @@ if not exist ".venv\card-generator-ready" (
 )
 if not exist "research-cache\cedict.gz" goto install_research
 if not exist "research-cache\hanzi.jsonl" goto install_research
-goto start
+goto supplements
 
 :install_research
 ".venv\Scripts\python.exe" server.py --download-research
 if errorlevel 1 echo Research setup could not finish. The studio can still open and accept manual card details.
+
+:supplements
+if not exist "research-cache\examples.tsv" goto install_supplements
+if not exist "research-cache\dong-reviewed.json" goto install_supplements
+goto start
+
+:install_supplements
+".venv\Scripts\python.exe" server.py --download-supplements
+if errorlevel 1 echo Extra history and sentence data are unavailable. The studio can still use the base dictionaries.
 
 :start
 ".venv\Scripts\python.exe" server.py --open-browser

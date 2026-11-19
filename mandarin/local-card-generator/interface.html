@@ -6,6 +6,7 @@
 <title>Vocabulary Card Studio | myLexiGo Mandarin</title>
 <link rel="stylesheet" href="./studio.css">
 <script src="./studio.js" defer></script>
+<script src="./lesson.js" defer></script>
 </head>
 <body>
 <header class="topbar">
@@ -65,12 +66,19 @@
           <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#search"></use></svg></span>
           <h2 id="query-title">Word research</h2>
         </div>
+        <fieldset class="research-modes">
+          <legend class="sr-only">Research mode</legend>
+          <label><input type="radio" name="research-mode" value="single" checked> Single Word</label>
+          <label><input type="radio" name="research-mode" value="lesson"> Full Lesson</label>
+        </fieldset>
+        <div id="single-query">
         <form id="research-form">
           <label for="word">Mandarin word</label>
           <div class="input-actions">
             <input id="word" name="word" lang="zh-Hans" maxlength="24" autocomplete="off" placeholder="e.g. 草莓" required>
             <button id="create" class="button primary" type="submit" disabled>Research &amp; Create</button>
           </div>
+          <button id="research-only" class="button outline compact research-only" type="submit" disabled>Research Only</button>
         </form>
         <p id="research-error" class="feedback" data-state="error" role="alert" hidden></p>
         <div class="examples">
@@ -79,6 +87,34 @@
           <button type="button" class="chip" data-word="苹果" lang="zh-Hans">苹果</button>
           <a id="jump-preview" class="preview-jump" href="#preview-title" hidden>View preview</a>
         </div>
+        </div>
+        <form id="lesson-form" hidden>
+          <label>Lesson title<input name="title" maxlength="100" placeholder="e.g. Fruits" required></label>
+          <label for="lesson-words">Mandarin words</label>
+          <textarea id="lesson-words" name="words" rows="5" maxlength="5000" aria-describedby="word-list-help word-count" required></textarea>
+          <div class="lesson-counter"><small id="word-list-help" class="help">Use lines, spaces, or commas.</small><output id="word-count">0 / 20 words</output></div>
+          <div class="lesson-actions">
+            <button id="lesson-research" class="button outline" type="submit" disabled>Research Only</button>
+            <button id="lesson-create" class="button primary" type="submit" disabled>Research &amp; Create</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="lesson-panel" class="panel lesson-panel" aria-labelledby="lesson-title" hidden>
+        <div class="panel-heading">
+          <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#book-open"></use></svg></span>
+          <h2 id="lesson-title">Lessons</h2>
+          <button id="resume-lesson" class="button outline compact" type="button" hidden>Resume</button>
+        </div>
+        <label for="saved-lessons">Saved lessons</label>
+        <select id="saved-lessons"><option value="">Choose a lesson</option></select>
+        <div id="lesson-summary" hidden>
+          <h3 id="active-lesson-title"></h3>
+          <progress id="lesson-progress" aria-label="Lesson processing progress"></progress>
+          <p id="lesson-counts" class="help" aria-live="polite"></p>
+          <ul id="lesson-items" tabindex="0" aria-label="Lesson words"></ul>
+        </div>
+        <p id="lesson-feedback" class="feedback" role="status" hidden></p>
       </section>
 
       <section class="panel" aria-labelledby="research-title">
@@ -97,6 +133,8 @@
           <div id="characters" class="characters"></div>
           <h3>Character history</h3>
           <p id="history" class="history"></p>
+          <h3>Example sentence</h3>
+          <p id="research-example" class="history"></p>
           <div id="sources" class="sources"></div>
         </div>
       </section>
@@ -110,6 +148,7 @@
           </button>
         </div>
         <p id="mnemonic-copy" class="panel-empty">Research a word to draft a memory cue and illustration scene.</p>
+        <small class="help" id="mnemonic-kind"></small>
       </section>
 
       <details class="panel manual">
@@ -123,9 +162,11 @@
           </div>
           <label>Character analysis<textarea name="character analysis" rows="3" maxlength="1200" required></textarea></label>
           <small class="help">Start each line with the corresponding character, a space, and its analysis.</small>
+          <label>Components with readings and meanings<textarea name="component notes" rows="2" maxlength="700"></textarea></label>
           <label>History<textarea name="history" rows="2" maxlength="280"></textarea></label>
           <label>History source<input name="history source" maxlength="160"></label>
           <label>Mnemonic<textarea name="mnemonic" rows="2" maxlength="300" required></textarea></label>
+          <input type="hidden" name="mnemonic kind">
           <label>Illustration scene<textarea name="scene" rows="2" maxlength="350" required></textarea></label>
           <label>Example in Chinese<input name="example Chinese" lang="zh-Hans" maxlength="160"></label>
           <label>Example in pinyin<input name="example pinyin" maxlength="160"></label>
@@ -139,6 +180,7 @@
       <div class="panel-heading">
         <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#image"></use></svg></span>
         <h2 id="preview-title" tabindex="-1">Card preview</h2>
+        <button id="generate-approved" class="button outline compact" type="button" hidden>Approve &amp; Generate</button>
         <button id="regenerate" class="button outline compact" type="button" disabled>
           <svg class="icon tiny" aria-hidden="true"><use href="./assets/feather.svg#refresh-cw"></use></svg>Regenerate Illustration
         </button>

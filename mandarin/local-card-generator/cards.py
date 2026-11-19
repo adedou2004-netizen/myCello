@@ -9,7 +9,7 @@ import tempfile
 import unicodedata
 from uuid import UUID
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, PngImagePlugin
 
 
 HAN = r"[\u3400-\u4dbf\u4e00-\u9fff\U00020000-\U000323af]"
@@ -94,6 +94,9 @@ def card_details(data):
     example = [field(name, 160, False) for name in ("example Chinese", "example pinyin", "example English")]
     if any(example) and not all(example):
         raise ValueError("Enter the example in Chinese, pinyin, and English.")
+    components = [line.strip() for line in field("component notes", 700, False).splitlines() if line.strip()]
+    if any(not re.fullmatch(HAN + r" .+", line) for line in components):
+        raise ValueError("Start each component note with its Chinese component and a space.")
     return {
         "headword": headword,
         "pinyin": pinyin,
@@ -103,6 +106,8 @@ def card_details(data):
         "characters": characters,
         "history": history,
         "source": source,
+        "components": components,
+        "historical mnemonic": field("mnemonic kind", 40, False) == "Historical inspiration",
         "mnemonic": field("mnemonic", 300),
         "scene": field("scene", 350),
         "example": example if all(example) else [],
@@ -148,11 +153,14 @@ def fit(text, width, maximum, minimum, bold=False):
     return font(minimum, bold)
 
 
-def render_card(details, art):
+def render_card(details, art, *, draft=None):
     sections = [("Characters", details["characters"], "#fbe9df", "#8b3b2e")]
+    if details["components"]:
+        sections.append(("Components", details["components"], "#fbe9df", "#8b3b2e"))
     if details["history"]:
         sections.append(("History", [details["history"], details["source"]], "#f9efce", "#74521d"))
-    sections.append(("Mnemonic", [details["mnemonic"]], "#eaf0d9", "#426327"))
+    mnemonic_title = "Mnemonic (historical inspiration)" if details["historical mnemonic"] else "Mnemonic (invented memory aid)"
+    sections.append((mnemonic_title, [details["mnemonic"]], "#eaf0d9", "#426327"))
     if details["example"]:
         sections.append(("Example sentence", details["example"], "#f1e7f3", "#654379"))
 
@@ -163,7 +171,7 @@ def render_card(details, art):
         rows = []
         for text in paragraphs:
             glyph = None
-            if title == "Characters":
+            if title in {"Characters", "Components"}:
                 glyph, text = text.split(" ", 1)
             rows.append((glyph, wrap(text, body, WIDTH - (211 if glyph else 140))))
         height = 95 + sum(len(lines) * line_height + 8 for _, lines in rows)
@@ -218,7 +226,11 @@ def render_card(details, art):
         y += block_height + 18
 
     buffer = BytesIO()
-    card.save(buffer, format="PNG")
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("Mandarin headword", details["headword"])
+    if draft:
+        metadata.add_text("Studio draft", draft)
+    card.save(buffer, format="PNG", pnginfo=metadata)
     return buffer.getvalue()
 
 

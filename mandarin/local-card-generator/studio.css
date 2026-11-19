@@ -75,6 +75,27 @@ label > input, label > textarea { margin-top: 5px; }
 .button.outline:hover:not(:disabled) { background: var(--pale); }
 .button.compact { padding: 6px 10px; min-height: 35px; font-size: .77rem; }
 .examples { display: flex; align-items: center; gap: 7px; margin-top: 11px; color: var(--muted); font-size: .79rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.research-modes { display: flex; gap: 5px; padding: 4px; margin: 12px 0 0; border: 1px solid var(--line); border-radius: 30px; background: #f3f6fb; }
+.research-modes label { flex: 1; position: relative; margin: 0; padding: 8px; text-align: center; cursor: pointer; border-radius: 24px; color: var(--navy); }
+.research-modes input { position: absolute; opacity: 0; inset: 0; margin: 0; min-height: 0; cursor: pointer; }
+.research-modes label:has(:checked) { background: var(--pale); color: #146605; }
+.research-modes label:has(:focus-visible) { outline: 3px solid #4472df; }
+.research-only { margin-top: 7px; }
+.lesson-counter, .lesson-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.lesson-actions { justify-content: flex-end; flex-wrap: wrap; }
+.lesson-counter output { white-space: nowrap; font-size: .8rem; color: var(--muted); }
+.lesson-counter output[data-invalid] { color: #972723; }
+.lesson-panel progress { width: 100%; height: 12px; accent-color: var(--green); }
+#lesson-counts { margin: 8px 0; }
+#lesson-items { margin: 10px 0 0; padding: 2px 4px 2px 2px; list-style: none; display: grid; gap: 6px; max-block-size: 22rem; overflow-y: auto; }
+.lesson-item { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: #f8faff; }
+.lesson-item:has([aria-current="true"]) { border-color: #91c78b; background: #f0faeb; }
+.lesson-item .item-select { flex: 1; min-width: 0; border: none; text-align: left; background: transparent; padding: 4px 6px; color: var(--navy); }
+.lesson-item .item-select strong, .lesson-item .item-select span { display: block; overflow-wrap: anywhere; }
+.lesson-item .item-select span { color: var(--muted); font-size: .78rem; }
+.lesson-item[data-state="failed"] .item-select span { color: #972723; }
+#mnemonic-kind { display: block; margin-top: 6px; }
 .preview-jump { display: none; margin-left: auto; font-weight: 700; }
 .chip { border: 1px solid #d0e9c8; background: #f3fbee; color: #146605; font-weight: 700; padding: 4px 10px; border-radius: 24px; }
 .word-result { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 13px; border-radius: 12px; background: #f0f5ff; overflow-wrap: anywhere; }
