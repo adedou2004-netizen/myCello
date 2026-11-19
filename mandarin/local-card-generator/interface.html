@@ -1,0 +1,187 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vocabulary Card Studio | myLexiGo Mandarin</title>
+<link rel="stylesheet" href="./studio.css">
+<script src="./studio.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-content">
+    <div class="brand">
+      <img src="./assets/mylexigo.webp" alt="myLexiGo" width="142" height="44">
+      <span>Mandarin <span lang="zh-Hans">(中文)</span></span>
+    </div>
+    <a class="rules-link" href="../vocabulary-card-rules.md" target="_blank" rel="noopener">
+      <svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#book-open"></use></svg> Card rules
+      <svg class="icon tiny" aria-hidden="true"><use href="./assets/feather.svg#arrow-up-right"></use></svg>
+    </a>
+  </div>
+</header>
+
+<main class="shell">
+  <div class="intro">
+    <div>
+      <p class="section-label">Mandarin Administration</p>
+      <h1>Vocabulary Card Studio</h1>
+      <p>Research a Mandarin word, create an illustration, and review the card before saving.</p>
+    </div>
+    <div class="connection-wrap">
+      <span id="connection" class="connection" role="status" data-state="idle">
+        <svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#shield"></use></svg>
+        <span id="connection-label">Checking local engine</span>
+      </span>
+      <button class="text-button" id="reconnect" type="button" hidden>Reconnect</button>
+    </div>
+  </div>
+
+  <aside id="launch" class="notice" hidden>
+    <strong>Open the local studio</strong>
+    <p>Run <strong>Start Generator.cmd</strong> and keep its window open. Then <a href="http://127.0.0.1:8765/">open the studio on this PC</a>.</p>
+  </aside>
+  <noscript><p class="notice">Enable JavaScript in your browser to use the studio.</p></noscript>
+
+  <div id="workflow" class="workflow" aria-label="Card creation status">
+    <div class="step" data-state="idle">
+      <span class="step-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#search"></use></svg></span>
+      <div><strong>Research</strong><span id="research-state">Waiting for a word</span></div>
+    </div>
+    <div class="step" data-state="idle">
+      <span class="step-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#image"></use></svg></span>
+      <div><strong>Illustration</strong><span id="illustration-state">Waiting for research</span></div>
+    </div>
+    <div class="step" data-state="idle">
+      <span class="step-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#download"></use></svg></span>
+      <div><strong>Saving</strong><span id="saving-state">Waiting for approval</span></div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="left-column">
+      <section class="panel query-panel" aria-labelledby="query-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#search"></use></svg></span>
+          <h2 id="query-title">Word research</h2>
+        </div>
+        <form id="research-form">
+          <label for="word">Mandarin word</label>
+          <div class="input-actions">
+            <input id="word" name="word" lang="zh-Hans" maxlength="24" autocomplete="off" placeholder="e.g. 草莓" required>
+            <button id="create" class="button primary" type="submit" disabled>Research &amp; Create</button>
+          </div>
+        </form>
+        <p id="research-error" class="feedback" data-state="error" role="alert" hidden></p>
+        <div class="examples">
+          <span>Try a word</span>
+          <button type="button" class="chip" data-word="草莓" lang="zh-Hans">草莓</button>
+          <button type="button" class="chip" data-word="苹果" lang="zh-Hans">苹果</button>
+          <a id="jump-preview" class="preview-jump" href="#preview-title" hidden>View preview</a>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="research-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#book-open"></use></svg></span>
+          <h2 id="research-title">Research results</h2>
+        </div>
+        <p id="research-empty" class="panel-empty">Character components, dictionary meanings, and sourced history appear here.</p>
+        <div id="results" hidden>
+          <div class="word-result">
+            <strong id="result-word" lang="zh-Hans"></strong>
+            <div><div id="result-pinyin"></div><div id="result-meaning"></div><small id="result-traditional"></small></div>
+          </div>
+          <div id="senses-wrap" hidden><label for="senses">Reading and meaning</label><select id="senses"></select></div>
+          <h3>Character components</h3>
+          <div id="characters" class="characters"></div>
+          <h3>Character history</h3>
+          <p id="history" class="history"></p>
+          <div id="sources" class="sources"></div>
+        </div>
+      </section>
+
+      <section class="panel mnemonic-panel" aria-labelledby="mnemonic-title">
+        <div class="panel-heading">
+          <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#edit-2"></use></svg></span>
+          <h2 id="mnemonic-title">Proposed mnemonic</h2>
+          <button id="edit-mnemonic" class="button outline compact" type="button" disabled>
+            <svg class="icon tiny" aria-hidden="true"><use href="./assets/feather.svg#edit-2"></use></svg>Edit Mnemonic
+          </button>
+        </div>
+        <p id="mnemonic-copy" class="panel-empty">Research a word to draft a memory cue and illustration scene.</p>
+      </section>
+
+      <details class="panel manual">
+        <summary><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#sliders"></use></svg> Manual card details</summary>
+        <form id="card-fields">
+          <div class="field-pair">
+            <label>Chinese headword<input name="headword" lang="zh-Hans" maxlength="24" required></label>
+            <label>Numbered pinyin<input name="pinyin" maxlength="100" placeholder="cao3 mei2" required></label>
+            <label>English meaning<input name="English meaning" maxlength="60" required></label>
+            <label>French meaning<input name="French meaning" lang="fr" maxlength="60"></label>
+          </div>
+          <label>Character analysis<textarea name="character analysis" rows="3" maxlength="1200" required></textarea></label>
+          <small class="help">Start each line with the corresponding character, a space, and its analysis.</small>
+          <label>History<textarea name="history" rows="2" maxlength="280"></textarea></label>
+          <label>History source<input name="history source" maxlength="160"></label>
+          <label>Mnemonic<textarea name="mnemonic" rows="2" maxlength="300" required></textarea></label>
+          <label>Illustration scene<textarea name="scene" rows="2" maxlength="350" required></textarea></label>
+          <label>Example in Chinese<input name="example Chinese" lang="zh-Hans" maxlength="160"></label>
+          <label>Example in pinyin<input name="example pinyin" maxlength="160"></label>
+          <label>Example in English<input name="example English" maxlength="160"></label>
+          <button id="manual-create" class="button outline" type="submit" disabled>Generate from details</button>
+        </form>
+      </details>
+    </div>
+
+    <section class="panel preview-panel" aria-labelledby="preview-title">
+      <div class="panel-heading">
+        <span class="heading-icon"><svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#image"></use></svg></span>
+        <h2 id="preview-title" tabindex="-1">Card preview</h2>
+        <button id="regenerate" class="button outline compact" type="button" disabled>
+          <svg class="icon tiny" aria-hidden="true"><use href="./assets/feather.svg#refresh-cw"></use></svg>Regenerate Illustration
+        </button>
+      </div>
+      <div id="stage" class="stage" data-state="sample">
+        <span id="preview-kind" class="stage-label">Sample card</span>
+        <a id="full-size" class="stage-label full-size" href="./assets/example-card.webp" target="_blank" rel="noopener">
+          Full size <svg class="icon tiny" aria-hidden="true"><use href="./assets/feather.svg#arrow-up-right"></use></svg>
+        </a>
+        <img id="preview-image" src="./assets/example-card.webp" alt="Sample vocabulary card for 苹果">
+      </div>
+      <div class="preview-footer">
+        <div class="output">
+          <svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#file-text"></use></svg>
+          <div><strong id="filename">PNG export</strong><span id="destination">Downloads / Mandarin-Cards</span></div>
+        </div>
+        <button id="approve" class="button primary" type="button" disabled>
+          <svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#check"></use></svg>Approve &amp; Save
+        </button>
+      </div>
+      <p class="feedback" id="message" data-state="idle" role="status">Research a word to create your own preview.</p>
+    </section>
+  </div>
+</main>
+
+<dialog id="mnemonic-dialog" aria-labelledby="editor-title">
+  <form id="mnemonic-form">
+    <div class="panel-heading">
+      <h2 id="editor-title">Edit Mnemonic</h2>
+      <button type="button" id="close-editor" class="icon-button" aria-label="Close">
+        <svg class="icon" aria-hidden="true"><use href="./assets/feather.svg#x"></use></svg>
+      </button>
+    </div>
+    <label for="editor-mnemonic">Memory cue</label>
+    <textarea id="editor-mnemonic" rows="3" maxlength="300" required></textarea>
+    <label for="editor-scene">Illustration scene</label>
+    <textarea id="editor-scene" rows="3" maxlength="350" required></textarea>
+    <p class="help">Changing the scene requires a new illustration.</p>
+    <div class="dialog-actions">
+      <button class="button outline" id="cancel-editor" type="button">Cancel</button>
+      <button class="button primary" type="submit">Update Preview</button>
+    </div>
+  </form>
+</dialog>
+</body>
+</html>

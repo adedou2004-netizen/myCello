@@ -10,6 +10,9 @@
 *{box-sizing:border-box}html,body{margin:0;height:100%}
 body{font-family:"Nunito","Avenir Next",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:#fff;padding:10px 16px 8px}
+.administration{margin-top:8px;font-size:13px}
+.administration summary{cursor:pointer;font-weight:800;color:var(--ink)}
+.administration p{margin:8px 0 2px}
 h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:center}
 .sub{color:var(--muted);font-size:12px;text-align:center;margin-top:1px}
 .sessionbar{height:14px;background:#E5E5E5;border-radius:99px;overflow:hidden;margin:8px 0 0}
@@ -79,7 +82,12 @@ dialog::backdrop{background:#0008}
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Keep the streak. One character at a time.</div><div class="sessionbar"><span id="sessionFill" style="width:0%"></span></div></header>
+<header><h1 id="title">Today</h1><div class="sub" id="subtitle">Keep the streak. One character at a time.</div><div class="sessionbar"><span id="sessionFill" style="width:0%"></span></div>
+<details id="administration" class="administration" hidden>
+<summary>Administration</summary>
+<p><a href="http://127.0.0.1:8765/" target="_blank" rel="noopener">Local Vocabulary Card Generator</a></p>
+<p class="muted">On Windows, start the generator with <code>mandarin/local-card-generator/Start Generator.cmd</code>.</p>
+</details></header>
 <main id="app"></main>
 <nav>
 <button data-tab="today" aria-selected="true">Today</button>
@@ -639,6 +647,9 @@ function select(which){
   if(which==="quiz") renderQuiz();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
+if(location.protocol==="file:"||["localhost","127.0.0.1","[::1]"].includes(location.hostname)){
+  $("#administration").hidden=false;
+}
 select("today"); remotePalaceReady=loadRemotePalace();
 </script>
 </body>

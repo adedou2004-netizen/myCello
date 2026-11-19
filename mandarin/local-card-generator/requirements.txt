@@ -1,0 +1,5 @@
+Pillow==12.2.0
+diffusers==0.35.2
+transformers==4.55.4
+accelerate==1.10.1
+hf-xet==1.8.0
