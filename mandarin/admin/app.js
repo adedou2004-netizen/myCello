@@ -164,6 +164,8 @@ function words() {
   });
   $("bulkPrompt").onclick = act(() => {
     if (!checked.size) throw Error("Select words first.");
+    const incomplete = [...checked].filter(id => A.promptErrors(data, id).length);
+    if (incomplete.length) throw Error("Research Required: " + incomplete.map(id => data.entries.find(e => e.id === id)?.hanzi + " — " + A.promptErrors(data,id).join(" ")).join("; "));
     download(
       [...checked].map((id) => A.prompt(data, id)).join("\n\n---\n\n"),
       "vocabulary_card_prompts.md",
@@ -269,7 +271,7 @@ function studio() {
   const r = data.research.find((x) => x.entry_id === e.id) || {},
     components = data.components.filter((c) => c.entry_id === e.id);
   $("content").innerHTML =
-    `<div class="split"><div><section class="panel"><h2>Word research</h2><div class="hanzi">${esc(e.hanzi)}</div><p>${esc(e.pinyin)} · ${esc(e.meaning_en)}</p><p class="muted">Local dictionary · no AI service connected</p><form id="researchForm"><label>Verified history<textarea id="origin">${esc(r.verified_origin_en)}</textarea></label><label>Sources (one URL or reference per line)<textarea id="sources">${esc((r.sources || []).map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("\n"))}</textarea></label><label><input id="verified" type="checkbox" ${r.verification_status === "verified" ? "checked" : ""}> I have checked this history against these sources</label><h3>Components</h3>${components
+    `<div class="split"><div><section class="panel"><h2>Word research</h2><div class="hanzi">${esc(e.hanzi)}</div><p>${esc(e.pinyin)} · ${esc(e.meaning_en)}</p><p class="muted">Local dictionary · no AI service connected</p><form id="researchForm"><label>Verified history<textarea id="origin">${esc(r.verified_origin_en)}</textarea></label><label>Sources (at least two independent URLs, one per line)<textarea id="sources">${esc((r.sources || []).map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("\n"))}</textarea></label><label><input id="verified" type="checkbox" ${r.verification_status === "verified" ? "checked" : ""}> I have checked this history against these sources</label><label>Character formation type<input id="formationType" value="${esc(r.formation_type)}" placeholder="Pictograph, phonosemantic, etc."></label><label><input id="noComponents" type="checkbox" ${r.components_not_applicable ? "checked" : ""}> Component decomposition not applicable</label><h3>Components</h3>${components
       .map((c) => {
         const p = data.entries.find((x) => x.id === c.component_entry_id);
         return `<div class="component-row" data-component="${esc(c.id)}"><strong class="component">${esc(p?.hanzi)}</strong> ${esc(p?.pinyin)} · ${esc(p?.meaning_en)}<label>Role<select data-role>${["", "semantic", "phonetic", "both", "visual_mnemonic"].map((v) => `<option value="${v}" ${c.role === v ? "selected" : ""}>${v || "Unverified"}</option>`).join("")}</select></label><label>Explanation<textarea data-explanation>${esc(c.explanation_en)}</textarea></label><label><input data-verified type="checkbox" ${c.verification_status === "verified" ? "checked" : ""}> Component verified</label></div>`;
@@ -284,7 +286,7 @@ function studio() {
       )
       .join(
         "",
-      )}</select></label><button type="button" id="addComponent">Add Component</button><h3>Proposed mnemonic — invented</h3><textarea id="mnemonic">${esc(e.mnemonic)}</textarea><label>One English word for filename<input id="filenameMeaning" value="${esc(e.filenameMeaning || e.meaning_en.split(/[;,/]/)[0].replace(/^to /, ""))}"></label><label>Import illustration<input id="illustration" type="file" accept="image/png,image/jpeg,image/webp"></label><p class="muted">Use your existing art or a locally generated illustration. Importing keeps it local and does not approve it.</p><button class="primary">Save Research and Details</button></form></section><section class="panel" style="margin-top:20px"><h2>Generation requirements</h2><p>Large Hanzi, official pinyin, meaning, verified history, component roles and a clearly identified invented mnemonic. Example sentences remain optional for this MVP.</p><button id="prompt">Export Image Prompt</button></section></div><section class="panel"><h2>Card preview</h2><button id="generate" class="primary">Create Draft Card</button><p id="cardErrors" class="warning"></p><img id="preview" class="preview" alt="Generated vocabulary card draft" hidden><div class="actions"><button id="exportPNG" disabled>Export PNG</button><button id="approve" disabled>Approve Draft</button><button id="reject" disabled>Reject Draft</button></div><p>Drafts remain unapproved until you explicitly accept them.</p><h3>Existing card records</h3>${
+      )}</select></label><button type="button" id="addComponent">Add Component</button><h3>Memory trick</h3><label>Mnemonic type<select id="mnemonicType">${["","historical","component","invented"].map(v => `<option value="${v}" ${e.mnemonic_type === v ? "selected" : ""}>${v || "Choose type"}</option>`).join("")}</select></label><label>Concrete visual memory trick<textarea id="mnemonic">${esc(e.mnemonic)}</textarea></label><label>Example sentence<input id="exampleHanzi" value="${esc(e.example?.hanzi)}"></label><label>Example pinyin<input id="examplePinyin" value="${esc(e.example?.pinyin)}"></label><label>Example English translation<input id="exampleEnglish" value="${esc(e.example?.meaning)}"></label><label>One English word for filename<input id="filenameMeaning" value="${esc(e.filenameMeaning || e.meaning_en.split(/[;,/]/)[0].replace(/^to /, ""))}"></label><label>Import illustration<input id="illustration" type="file" accept="image/png,image/jpeg,image/webp"></label><p class="muted">Use your existing art or a locally generated illustration. Importing keeps it local and does not approve it.</p><button class="primary">Save Research and Details</button></form></section><section class="panel" style="margin-top:20px"><h2>Generation requirements</h2><p>Portrait 2:3 (1024 × 1536), large Hanzi, verified history, two source URLs, a meaningful memory trick and an example sentence.</p><p id="promptStatus" class="warning">${esc(A.promptErrors(data, selected).join(" "))}</p><button id="researchPrompt">Export Research Request</button> <button id="prompt" ${A.promptErrors(data, selected).length ? "disabled" : ""}>Export Image Prompt</button></section></div><section class="panel"><h2>Card preview</h2><button id="generate" class="primary">Create Draft Card</button><p id="cardErrors" class="warning"></p><img id="preview" class="preview" alt="Generated vocabulary card draft" hidden><div class="actions"><button id="exportPNG" disabled>Export PNG</button><button id="approve" disabled>Approve Draft</button><button id="reject" disabled>Reject Draft</button></div><p>Drafts remain unapproved until you explicitly accept them.</p><h3>Existing card records</h3>${
       cardsFor(e.id)
         .map(
           (c) =>
@@ -304,6 +306,8 @@ function studio() {
       }
       Object.assign(research, {
         verified_origin_en: $("origin").value.trim(),
+        formation_type: $("formationType").value.trim(),
+        components_not_applicable: $("noComponents").checked,
         sources: $("sources")
           .value.split("\n")
           .map((x) => x.trim())
@@ -314,6 +318,8 @@ function studio() {
       });
       Object.assign(word, {
         mnemonic: $("mnemonic").value.trim(),
+        mnemonic_type: $("mnemonicType").value,
+        example: { hanzi: $("exampleHanzi").value.trim(), pinyin: $("examplePinyin").value.trim(), meaning: $("exampleEnglish").value.trim() },
         filenameMeaning: $("filenameMeaning").value.trim(),
       });
       for (const row of document.querySelectorAll("[data-component]")) {
@@ -358,6 +364,7 @@ function studio() {
     await commit(n);
     studio();
   });
+  $("researchPrompt").onclick = act(() => download(A.researchPrompt(data, selected), "vocabulary_research_request.md", "text/markdown"));
   $("prompt").onclick = act(() =>
     download(
       A.prompt(data, selected),
