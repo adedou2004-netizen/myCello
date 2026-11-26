@@ -46,6 +46,27 @@ function createAdminServer(dataDir = path.join(__dirname, ".data")) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     try {
       const url = new URL(req.url, `http://${host}`);
+      if (url.pathname === "/api/card-image" && req.method === "GET") {
+        const snapshot = await read();
+        const card = snapshot.cards.find(c => c.id === url.searchParams.get("id"));
+        if (!card) return fail(404, "Card record not found.");
+        const objectPath = card.vocabulary_card_path || "";
+        const parts = objectPath.split("/");
+        const ext = path.extname(objectPath).toLowerCase();
+        const types = { ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg" };
+        if (!types[ext] || parts.some(p => !p || p === "." || p === ".." || p.includes("\\"))) return fail(404, "No supported image path.");
+        const imageRoot = path.resolve(dataDir, "cards");
+        const local = path.resolve(imageRoot, ...parts);
+        if (!local.startsWith(imageRoot + path.sep)) return fail(404, "Invalid card path.");
+        try {
+          const actual = await fs.realpath(local);
+          if (!actual.startsWith(await fs.realpath(imageRoot) + path.sep)) return fail(404, "Invalid local image path.");
+          const bytes = await fs.readFile(actual);
+          res.setHeader("Content-Type", types[ext]);
+          return res.end(bytes);
+        } catch (e) { if (e.code !== "ENOENT") throw e; }
+        return fail(404, "Image not copied to local cards folder.");
+      }
       if (url.pathname === "/api/data" && req.method === "GET") {
         const raw = await fs.readFile(file, "utf8");
         Core.validate(JSON.parse(raw));
