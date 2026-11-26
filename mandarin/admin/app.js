@@ -73,7 +73,7 @@ function cardsFor(id) {
   return data.cards.filter((c) => c.entry_id === id);
 }
 function cardStatus(id) {
-  const cards = cardsFor(id);
+  const cards = cardsFor(id).filter(c => c.local_svg || c.local_image || (c.storage_bucket === "man_vocabularyCard" && data.objects.some(o => o.bucket_id === c.storage_bucket && o.name === c.vocabulary_card_path)));
   return cards.some((c) => c.review_status === "approved")
     ? "Approved"
     : cards.length
@@ -112,8 +112,8 @@ function words() {
   const list = A.search(data.entries, query).filter(
     (e) =>
       !filter ||
-      (filter === "verified"
-        ? e.verification_status === "verified"
+      (filter === "available"
+        ? cardStatus(e.id) !== "Missing"
         : filter === "missing"
           ? cardStatus(e.id) === "Missing"
           : filter === "draft"
@@ -124,7 +124,7 @@ function words() {
   wordPage = Math.min(wordPage, count - 1);
   const visible = list.slice(wordPage * size, (wordPage + 1) * size);
   $("content").innerHTML =
-    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="verified">Verified (${verified})</button><button data-filter="approved">Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel word-list"><div class="word-table"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${visible.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table></div><div class="pager" id="wordPager"></div><small>${list.length} words</small></div><div class="panel" id="details"></div></div>`;
+    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="available">Cards available (${data.entries.filter(e => cardStatus(e.id) !== "Missing").length})</button><button data-filter="approved">Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="syncCards" class="primary">Synchronize with Supabase</button><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel word-list"><div class="word-table"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${visible.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table></div><div class="pager" id="wordPager"></div><small>${list.length} words</small></div><div class="panel" id="details"></div></div>`;
   pager("wordPager", wordPage, count, i => { wordPage = i; words(); });
   $("search").oninput = (e) => {
     const position = e.target.selectionStart;
@@ -168,6 +168,15 @@ function words() {
     selected = null;
     details();
   };
+  $("syncCards").onclick = act(async () => {
+    $("syncCards").disabled = true;
+    try {
+      const response = await fetch("/api/sync-cards",{method:"POST"}), result = await response.json();
+      if (!response.ok) throw Error(result.error);
+      data = A.validate(result.data); tag = result.etag; words();
+      message(`${result.objects} images found · ${result.changed} links updated · ${result.report.filter(r=>r.status!=="linked").length} items need review.`);
+    } finally { if ($("syncCards")) $("syncCards").disabled = false; }
+  });
   $("bulkReview").onclick = act(async () => {
     if (!checked.size) throw Error("Select words first.");
     const n = structuredClone(data);
@@ -179,10 +188,9 @@ function words() {
   });
   $("bulkPrompt").onclick = act(() => {
     if (!checked.size) throw Error("Select words first.");
-    const incomplete = [...checked].filter(id => A.promptErrors(data, id).length);
-    if (incomplete.length) throw Error("Research Required: " + incomplete.map(id => data.entries.find(e => e.id === id)?.hanzi + " — " + A.promptErrors(data,id).join(" ")).join("; "));
+
     download(
-      [...checked].map((id) => A.prompt(data, id)).join("\n\n---\n\n"),
+      [...checked].map((id) => completeCardRequest(id)).join("\n\n---\n\n"),
       "vocabulary_card_prompts.md",
       "text/markdown",
     );
@@ -246,20 +254,21 @@ function details() {
   };
   const linked = selected ? cardsFor(selected).slice().sort((a,b) => Number(b.review_status === "approved") - Number(a.review_status === "approved")) : [];
   $("details").innerHTML =
-    `<div class="hanzi" lang="zh-Hans">${esc(e.hanzi)}</div><h2>${selected ? "Word Details" : "Add Word"}</h2><div class="detail-tabs"><button id="showFields" type="button">Word details</button><button id="showCard" type="button" ${selected ? "" : "disabled"}>Vocabulary cards (${linked.length})</button><button id="openStudio" type="button" ${selected ? "" : "disabled"}>Create / Edit Card</button></div><form id="wordForm"><label>Chinese<input name="hanzi" value="${esc(e.hanzi)}" required></label><label>Pinyin<input name="pinyin" value="${esc(e.pinyin)}" required></label><label>English<input name="meaning_en" value="${esc(e.meaning_en)}" required></label><label>French (optional)<input name="meaning_fr" value="${esc(e.meaning_fr)}"></label><label>Type<select name="entry_type">${["character", "expression", "radical", "sentence"].map((t) => `<option ${e.entry_type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label><label>HSK (optional)<input name="hsk_level" type="number" min="1" value="${esc(e.hsk_level)}"></label><label>Notes<textarea name="admin_notes">${esc(e.admin_notes)}</textarea></label><button class="primary">Save Word</button></form><section id="linkedCards" hidden><div id="linkedChoice"></div><img id="linkedImage" class="linked-image" alt="Attached vocabulary card" hidden><p id="linkedStatus" role="status"></p></section>`;
+    `<div class="hanzi" lang="zh-Hans">${esc(e.hanzi)}</div><h2>${selected ? "Word Details" : "Add Word"}</h2><div class="detail-tabs"><button id="showFields" type="button">Word details</button><button id="showCard" type="button" ${selected ? "" : "disabled"}>Vocabulary cards (${linked.length})</button><button id="openStudio" type="button" ${selected ? "" : "disabled"}>Create / Edit Card</button></div><form id="wordForm"><label>Chinese<input name="hanzi" value="${esc(e.hanzi)}" required></label><label>Pinyin<input name="pinyin" value="${esc(e.pinyin)}" required></label><label>English<input name="meaning_en" value="${esc(e.meaning_en)}" required></label><label>French (optional)<input name="meaning_fr" value="${esc(e.meaning_fr)}"></label><label>Type<select name="entry_type">${["character", "expression", "radical", "sentence"].map((t) => `<option ${e.entry_type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label><label>HSK (optional)<input name="hsk_level" type="number" min="1" value="${esc(e.hsk_level)}"></label><label>Notes<textarea name="admin_notes">${esc(e.admin_notes)}</textarea></label><button class="primary">Save Word</button></form><section id="linkedCards" hidden><div id="linkedChoice"></div><img id="linkedImage" class="linked-image" alt="Attached vocabulary card" hidden><p id="linkedStatus" role="status"></p><button id="approveLinked" hidden>Approve card</button></section>`;
   function showLinked(index) {
     const card = linked[index], image = $("linkedImage"), status = $("linkedStatus");
-    image.hidden = true; image.removeAttribute("src");
+    image.hidden = true; image.removeAttribute("src"); $("approveLinked").hidden = true;
     if (!card) { status.textContent = "No vocabulary card attached to this word."; return; }
     const label = card.review_status + " · " + (card.vocabulary_card_path || "Local card");
     status.textContent = label;
-    image.onload = () => { image.hidden = false; status.textContent = label; };
-    image.onerror = () => { image.hidden = true; status.textContent = label + " — image file is not available locally. Copy the original image into mandarin/admin/.data/cards using its recorded filename."; };
-    image.src = card.local_svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(card.local_svg) : "/api/card-image?id=" + encodeURIComponent(card.id);
+    image.onload = () => { image.hidden = false; status.textContent = label; $("approveLinked").hidden = card.review_status !== "pending"; };
+    image.onerror = () => { image.hidden = true; status.textContent = label + " — image could not be retrieved. Check the Supabase connection or local image folder."; };
+    image.src = card.local_image || (card.local_svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(card.local_svg) : "/api/card-image?id=" + encodeURIComponent(card.id));
   }
   $("linkedChoice").innerHTML = linked.length ? `<select id="linkedSelect" aria-label="Attached vocabulary cards">${linked.map((card,i) => `<option value="${i}">${esc(card.review_status + " · " + (card.vocabulary_card_path || "Local card"))}</option>`).join("")}</select>` : "";
   if ($("linkedSelect")) $("linkedSelect").onchange = event => showLinked(+event.target.value);
   function detailTab(cards) { $("wordForm").hidden = cards; $("linkedCards").hidden = !cards; $("showFields").classList.toggle("active", !cards); $("showCard").classList.toggle("active", cards); if(cards) showLinked($("linkedSelect") ? +$("linkedSelect").value : 0); }
+  $("approveLinked").onclick = act(async () => { const card=linked[+$("linkedSelect").value]; const n=structuredClone(data); n.cards.find(c=>c.id===card.id).review_status="approved"; await commit(n); words(); });
   $("showFields").onclick = () => detailTab(false);
   $("showCard").onclick = () => detailTab(true);
   detailTab(!!linked.length);
@@ -293,6 +302,9 @@ function details() {
     }
   };
   $("openStudio").onclick = () => setPage("cards");
+}
+function completeCardRequest(id) {
+  return A.researchPrompt(data,id).replace("Research request ONLY — do not generate an image.", "Research the following word and then generate a complete vocabulary card image. Verify history before generating; if evidence is missing do not generate.") + "\nAfter research, create a portrait 2:3 (1024 × 1536) watercolor card with very large Hanzi, tone-marked pinyin, English meaning, verified history, correctly identified components where relevant, a clearly labeled memory trick and a short example sentence. Keep text readable on a phone. Return sources separately. Never invent historical facts. Draft only.";
 }
 function studio() {
   const e = data.entries.find((x) => x.id === selected);
@@ -399,6 +411,21 @@ function studio() {
     studio();
   });
   setupStudioSteps(saveResearch);
+  const quick = document.createElement("section"); quick.className="panel"; quick.innerHTML = `<h2>Vocabulary card · ${esc(e.hanzi)} · ${esc(e.pinyin)}</h2><p>${esc(e.meaning_en)}</p><div class="actions"><button id="quickPrompt" class="primary">Export AI card request</button><button id="quickImport">Import completed card</button><button id="advancedResearch">Advanced research</button></div><input id="completedCard" type="file" accept="image/png,image/webp,image/jpeg" hidden><p id="quickStatus"></p>`;
+  const layout = $("content").querySelector(".studio-layout"), nav = $("content").querySelector(".step-nav");
+  layout.hidden = nav.hidden = true; $("content").prepend(quick);
+  $("advancedResearch").onclick = () => { layout.hidden = nav.hidden = !layout.hidden; };
+  $("quickPrompt").onclick = () => download(completeCardRequest(selected),"vocabulary_card_request.md","text/markdown");
+  $("quickImport").onclick = () => $("completedCard").click();
+  $("completedCard").onchange = act(async () => {
+    const file = $("completedCard").files[0]; if(!file) return;
+    if(file.size > 6*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(file.type)) throw Error("Choose a PNG, JPEG or WebP under 6 MB.");
+    const image = await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+    const n=structuredClone(data); const word=n.entries.find(x=>x.id===selected); const sense=word.filenameMeaning || word.meaning_en.split(/[;,/]/)[0].trim().replace(/^to /,"");
+    const name=A.filename(sense,word.pinyin,file.type==="image/webp"?"webp":"png");
+    n.cards.push({id:crypto.randomUUID(),entry_id:selected,subject_text:word.hanzi,pinyin:word.pinyin,sense,storage_bucket:null,vocabulary_card_path:name,review_status:"pending",is_shared:false,local_image:image});
+    await commit(n); setPage("words");
+  });
   $("researchPrompt").onclick = act(() => download(A.researchPrompt(data, selected), "vocabulary_research_request.md", "text/markdown"));
   $("prompt").onclick = act(() =>
     download(
