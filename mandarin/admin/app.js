@@ -22,7 +22,7 @@ let data,
   checked = new Set(),
   previewURL = null,
   wordPage = 0, studioStep = 0, reportPage = 0;
-function pageSize() { return Math.max(2, Math.min(12, Math.floor(((window.innerHeight || 800) - 350) / 48))); }
+function pageSize() { return Math.max(1, Math.min(10, Math.floor(((window.innerHeight || 800) - 385) / 58))); }
 function pager(id, index, count, change) {
   const el = $(id);
   el.innerHTML = `<button type="button" data-prev ${index === 0 ? "disabled" : ""}>← Previous</button><span>Page ${index + 1} of ${count}</span><button type="button" data-next ${index + 1 >= count ? "disabled" : ""}>Next →</button>`;
@@ -107,8 +107,8 @@ function words() {
   const verified = data.entries.filter(
       (e) => e.verification_status === "verified",
     ).length,
-    approved = data.cards.filter((c) => c.review_status === "approved").length,
-    drafts = data.cards.filter((c) => c.review_status === "pending").length;
+    approved = data.entries.filter(e => cardStatus(e.id) === "Approved").length,
+    drafts = data.entries.filter(e => cardStatus(e.id) === "Draft").length;
   const list = A.search(data.entries, query).filter(
     (e) =>
       !filter ||
@@ -118,13 +118,13 @@ function words() {
           ? cardStatus(e.id) === "Missing"
           : filter === "draft"
             ? cardStatus(e.id) === "Draft"
-            : true),
+            : filter === "approved" ? cardStatus(e.id) === "Approved" : true),
   );
   const size = pageSize(), count = Math.max(1, Math.ceil(list.length / size));
   wordPage = Math.min(wordPage, count - 1);
   const visible = list.slice(wordPage * size, (wordPage + 1) * size);
   $("content").innerHTML =
-    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="verified">Verified (${verified})</button><button disabled>Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${visible.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table><div class="pager" id="wordPager"></div><p>${list.length} words</p></div><div class="panel" id="details"></div></div>`;
+    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="verified">Verified (${verified})</button><button data-filter="approved">Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel word-list"><div class="word-table"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${visible.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table></div><div class="pager" id="wordPager"></div><small>${list.length} words</small></div><div class="panel" id="details"></div></div>`;
   pager("wordPager", wordPage, count, i => { wordPage = i; words(); });
   $("search").oninput = (e) => {
     const position = e.target.selectionStart;
@@ -244,8 +244,25 @@ function details() {
     meaning_en: "",
     entry_type: "character",
   };
+  const linked = selected ? cardsFor(selected).slice().sort((a,b) => Number(b.review_status === "approved") - Number(a.review_status === "approved")) : [];
   $("details").innerHTML =
-    `<div class="hanzi" lang="zh-Hans">${esc(e.hanzi)}</div><h2>${selected ? "Word Details" : "Add Word"}</h2><form id="wordForm"><label>Chinese<input name="hanzi" value="${esc(e.hanzi)}" required></label><label>Pinyin<input name="pinyin" value="${esc(e.pinyin)}" required></label><label>English<input name="meaning_en" value="${esc(e.meaning_en)}" required></label><label>French (optional)<input name="meaning_fr" value="${esc(e.meaning_fr)}"></label><label>Type<select name="entry_type">${["character", "expression", "radical", "sentence"].map((t) => `<option ${e.entry_type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label><label>HSK (optional)<input name="hsk_level" type="number" min="1" value="${esc(e.hsk_level)}"></label><label>Notes<textarea name="admin_notes">${esc(e.admin_notes)}</textarea></label><button class="primary">Save Word</button></form><div class="actions"><button id="openStudio" ${selected ? "" : "disabled"}>Create / Edit Card</button></div>`;
+    `<div class="hanzi" lang="zh-Hans">${esc(e.hanzi)}</div><h2>${selected ? "Word Details" : "Add Word"}</h2><div class="detail-tabs"><button id="showFields" type="button">Word details</button><button id="showCard" type="button" ${selected ? "" : "disabled"}>Vocabulary cards (${linked.length})</button><button id="openStudio" type="button" ${selected ? "" : "disabled"}>Create / Edit Card</button></div><form id="wordForm"><label>Chinese<input name="hanzi" value="${esc(e.hanzi)}" required></label><label>Pinyin<input name="pinyin" value="${esc(e.pinyin)}" required></label><label>English<input name="meaning_en" value="${esc(e.meaning_en)}" required></label><label>French (optional)<input name="meaning_fr" value="${esc(e.meaning_fr)}"></label><label>Type<select name="entry_type">${["character", "expression", "radical", "sentence"].map((t) => `<option ${e.entry_type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label><label>HSK (optional)<input name="hsk_level" type="number" min="1" value="${esc(e.hsk_level)}"></label><label>Notes<textarea name="admin_notes">${esc(e.admin_notes)}</textarea></label><button class="primary">Save Word</button></form><section id="linkedCards" hidden><div id="linkedChoice"></div><img id="linkedImage" class="linked-image" alt="Attached vocabulary card" hidden><p id="linkedStatus" role="status"></p></section>`;
+  function showLinked(index) {
+    const card = linked[index], image = $("linkedImage"), status = $("linkedStatus");
+    image.hidden = true; image.removeAttribute("src");
+    if (!card) { status.textContent = "No vocabulary card attached to this word."; return; }
+    const label = card.review_status + " · " + (card.vocabulary_card_path || "Local card");
+    status.textContent = label;
+    image.onload = () => { image.hidden = false; status.textContent = label; };
+    image.onerror = () => { image.hidden = true; status.textContent = label + " — image file is not available locally. Copy the original image into mandarin/admin/.data/cards using its recorded filename."; };
+    image.src = card.local_svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(card.local_svg) : "/api/card-image?id=" + encodeURIComponent(card.id);
+  }
+  $("linkedChoice").innerHTML = linked.length ? `<select id="linkedSelect" aria-label="Attached vocabulary cards">${linked.map((card,i) => `<option value="${i}">${esc(card.review_status + " · " + (card.vocabulary_card_path || "Local card"))}</option>`).join("")}</select>` : "";
+  if ($("linkedSelect")) $("linkedSelect").onchange = event => showLinked(+event.target.value);
+  function detailTab(cards) { $("wordForm").hidden = cards; $("linkedCards").hidden = !cards; $("showFields").classList.toggle("active", !cards); $("showCard").classList.toggle("active", cards); if(cards) showLinked($("linkedSelect") ? +$("linkedSelect").value : 0); }
+  $("showFields").onclick = () => detailTab(false);
+  $("showCard").onclick = () => detailTab(true);
+  detailTab(!!linked.length);
   $("wordForm").onsubmit = async (event) => {
     event.preventDefault();
     try {
