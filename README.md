@@ -11,4 +11,7 @@ Each app is something I have developed for my own daily use. The goal is simple:
 
 More private-use cell-phone apps can be added here over time.
 
-- Mandarin phone app — Today, Lessons, Capture, Library, Quiz. Dictionary once, lessons as lists, palace image in the memory-palace-cards bucket.
+- Mandarin phone app — Today, Lessons, Capture, My Words and Quiz.
+- Local Mandarin administration — run `npm ci` then `npm run admin`, and open `http://127.0.0.1:8765/`. Install your private data snapshot at `mandarin/admin/.data/dictionary.json` first.
+
+Current Mandarin requirements, architecture and checks are in [mandarin/docs/PRODUCT.md](mandarin/docs/PRODUCT.md), [ARCHITECTURE.md](mandarin/docs/ARCHITECTURE.md) and [TEST_PLAN.md](mandarin/docs/TEST_PLAN.md).

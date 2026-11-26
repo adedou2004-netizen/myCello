@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "node --test mandarin/tests/*.test.cjs",
-    "test:ocr": "node mandarin/tests/ocr-benchmark.cjs"
+    "test:ocr": "node mandarin/tests/ocr-benchmark.cjs",
+    "admin": "node mandarin/admin/server.cjs"
   },
   "devDependencies": {
     "fake-indexeddb": "6.0.0",

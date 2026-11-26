@@ -10,13 +10,13 @@
 
 ## Persistence and privacy
 
-Vocabulary retains the existing `mandarinAppV2` localStorage contract. Capture constructs a detached next snapshot and replaces the whole JSON record atomically; failed writes do not change the in-memory dictionary. This avoids a risky vocabulary migration. A baseline comparison refuses saves after another tab changes the dictionary (not a full distributed synchronization system).
+Vocabulary retains the existing `mandarinAppV2` localStorage contract and queues full IndexedDB checkpoints in `myCello-learning` after successful saves. Startup can recover the checkpoint if compatible JSON is absent; see `docs/ARCHITECTURE.md` for precedence and failure behavior. Capture constructs a detached next snapshot and replaces the whole JSON record atomically; failed writes do not change the in-memory dictionary. This avoids a risky vocabulary migration. A baseline comparison refuses saves after another tab changes the dictionary (not a full distributed synchronization system).
 
 A separate IndexedDB transaction stores the private capture draft, including the normalized photo, crop, corrected text, verification, selection and form fields. Draft writes are serialized and generation-guarded. Restore is explicit. Backgrounding stops camera/OCR and schedules draft persistence; abrupt OS termination before a pending transaction completes can still lose the last unsaved keystrokes.
 
 Versioned JSON backup export/import includes dictionary, lessons, examples, review history and current draft text/form. Photo bytes are deliberately excluded from exported JSON. Imports are validated and require explicit replacement confirmation; previous dictionary bytes are retained under `mandarinAppV2-before-restore`. Corrupt existing JSON is never silently overwritten.
 
-Supabase tables, policies, image assets, and approval statuses are unchanged. There is no cloud vocabulary synchronization. Recognition is local; first use requires internet to load CDN scripts, WASM and Chinese traineddata. Full offline app installation/caching is not claimed.
+Supabase tables, policies, image assets, and approval statuses are unchanged. There is no cloud vocabulary synchronization. Administration vocabulary/lesson bundles can be merged through Capture import without replacing learning progress. Recognition is local; first use requires internet to load CDN scripts, WASM and Chinese traineddata. Full offline app installation/caching is not claimed.
 
 ## Concurrency and errors
 

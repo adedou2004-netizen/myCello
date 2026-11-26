@@ -87,14 +87,16 @@ dialog::backdrop{background:#0008}
 <button data-tab="today" aria-selected="true">Today</button>
 <button data-tab="lessons">Lessons</button>
 <button data-tab="capture">Capture</button>
-<button data-tab="library">Library</button>
+<button data-tab="library">My Words</button>
 <button data-tab="quiz">Quiz</button>
 </nav>
 <dialog id="memoryAidDlg"><div class="dlghead"><strong id="memoryAidTitle">Memory Aid</strong><button id="memoryAidClose" type="button">Close</button></div><div class="dlgbody"><img id="memoryAidImg" alt="App-provided character memory aid" class="hidden"><p id="memoryAidNote"></p><p id="memoryAidStatus" class="muted"></p></div></dialog>
-<dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a Memory Palace card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
+<dialog id="palacePromptDlg" aria-labelledby="palacePromptTitle"><div class="dlghead"><strong id="palacePromptTitle">Create a vocabulary card</strong><button id="palacePromptClose" type="button">Close</button></div><div class="dlgbody"><p>Copy this into ChatGPT</p><div id="palacePromptWord" class="glyph"></div><label for="palacePromptText">Word and SkillMD instructions</label><textarea id="palacePromptText" readonly rows="12" style="font-size:16px;font-weight:400"></textarea><button id="palacePromptCopy" class="primary" type="button">Copy this into ChatGPT</button><p id="palacePromptStatus" role="status" aria-live="polite"></p></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="./capture-core.js?v=20261117-review1"></script>
+<script src="./admin/core.js"></script>
+<script src="./progress-store.js"></script>
 <script>
 const SUPABASE_URL="https://dbqrenlvinqheyjppxby.supabase.co";
 const SUPABASE_KEY="sb_publishable__twdY8fk0pZo7dU-BNDwWg_0-JQ1BjJ";
@@ -106,6 +108,29 @@ const escapeHTML=s=>String(s??" ").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;
 let tab="today", study=null, reviewOrder=[], lessonQueue=[], lessonAt=0, quiz=null;
 let storageLoadError=null,storageBaseline=null;
 let db=load();
+const learningStore=typeof ProgressStore!=='undefined'?ProgressStore.create(indexedDB):null;
+function persistLearning(){
+  if(!learningStore)return Promise.resolve();
+  return learningStore.write(db).catch(error=>{
+    let warning=document.getElementById('progressWarning');
+    if(!warning){warning=document.createElement('p');warning.id='progressWarning';warning.setAttribute('role','alert');document.querySelector('header').append(warning);}
+    warning.textContent='IndexedDB could not save progress: '+error.message+'. A compatibility copy remains on this device; export a backup.';
+  });
+}
+async function restoreLearning(){
+  if(!learningStore||storageLoadError)return;
+  try{
+    const stored=await learningStore.read();
+    // Prefer the live compatibility record if it exists. Never overwrite newer
+    // localStorage changes with an older asynchronous IndexedDB checkpoint.
+    if(storageBaseline===null && localStorage.getItem(KEY)===null && stored){
+      CaptureCore.validateDB(stored.database);db=stored.database;
+      const json=JSON.stringify(db);localStorage.setItem(KEY,json);storageBaseline=json;
+      select(dueIds().length?'today':'lessons');
+    }else await persistLearning();
+  }catch(error){const warning=document.createElement('p');warning.setAttribute('role','alert');warning.textContent='Learning recovery failed: '+error.message;document.querySelector('header').append(warning);}
+}
+const learningReady=restoreLearning();
 function addSmileExample(data){
   if(!Array.isArray(data.examples)) data.examples=[];
   const smile=data.entries.find(e=>e.simplified==="笑");
@@ -134,7 +159,7 @@ function load(){
 function save(){
   if(storageLoadError) throw Error("Saved dictionary could not be read. Use Capture backup/recovery before saving.");
   if(localStorage.getItem(KEY)!==storageBaseline) throw Error("Dictionary changed in another tab. Reload before saving.");
-  const json=JSON.stringify(db);localStorage.setItem(KEY,json);storageBaseline=json;
+  const json=JSON.stringify(db);localStorage.setItem(KEY,json);storageBaseline=json;persistLearning();
 }
 function french(py){
   const m={ā:"a",á:"a",ǎ:"a",à:"a",ē:"e",é:"e",ě:"e",è:"e",ī:"i",í:"i",ǐ:"i",ì:"i",ō:"o",ó:"o",ǒ:"o",ò:"o",ū:"u",ú:"u",ǔ:"u",ù:"u",ǖ:"ü",ǘ:"ü",ǚ:"ü",ǜ:"ü"};
@@ -216,23 +241,10 @@ function grade(id,good){
 }
 function examplesFor(id){return db.examples.filter(x=>x.entryId===id)}
 function palaceFor(e){return db.palace[e.id]||null}
-const DICTIONARY_AUDIO_API=SUPABASE_URL+"/functions/v1/mandarin-dictionary-audio";
-const dictionaryAudioCache=new Map();
 let activeAudio=null;
 async function speak(text){
-  const fallback=()=>{const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u.rate=.75;speechSynthesis.cancel();speechSynthesis.speak(u)};
-  try{
-    if(activeAudio){activeAudio.pause();activeAudio=null;}
-    let url=dictionaryAudioCache.get(text);
-    if(url===undefined){
-      const response=await fetch(DICTIONARY_AUDIO_API+"?text="+encodeURIComponent(text));
-      if(!response.ok)throw Error("Audio lookup failed");
-      const data=await response.json();url=data.audio_url||null;dictionaryAudioCache.set(text,url);
-    }
-    if(!url){fallback();return}
-    const audio=new Audio(url);activeAudio=audio;
-    await audio.play();
-  }catch(error){fallback();}
+  const u=new SpeechSynthesisUtterance(text);u.lang="zh-CN";u.rate=.75;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
 }
 function card(e, actions){
   const trad=e.traditional&&e.traditional!==e.simplified?`<div class="trad">Traditional ${escapeHTML(e.traditional)}</div>`:"";
@@ -298,7 +310,7 @@ let dictionaryFilter='all';
 function renderLibrary(){
   const q=($("#libQ")?.value||"").toLowerCase();
   const pending=db.entries.filter(e=>CaptureCore.needsDictionaryReview(db,e));
-  const list=db.entries.filter(e=>(dictionaryFilter!=='pending'||pending.includes(e))&&(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.meaning_fr||"")).toLowerCase().includes(q));
+  const list=db.entries.filter(e=>(dictionaryFilter!=='pending'||pending.includes(e))&&(typeof AdminCore!=="undefined"?AdminCore.search([{hanzi:e.simplified,pinyin:e.pinyin,meaning_en:e.meaning,meaning_fr:e.meaning_fr}],q).length>0:(e.simplified+(e.pinyin||"")+(e.meaning||"")+(e.meaning_fr||"")).toLowerCase().includes(q)));
   $("#app").innerHTML=`<div class="card"><p class="muted">Personal dictionary · saved on this device. Export a backup in Capture to keep a copy. Account sync is not available.</p><div class="row"><button id="dictAll" aria-pressed="${dictionaryFilter==='all'}">All words (${db.entries.length})</button><button id="dictPending" aria-pressed="${dictionaryFilter==='pending'}">Needs review (${pending.length})</button></div><p class="muted">Check captured words here. Dictionary review does not change SRS progress.</p></div><label for="libQ">Search your dictionary</label><input id="libQ" placeholder="Character, pinyin or meaning" value="${escapeHTML(q)}"><p class="muted">Showing ${list.length} words.</p>`+list.map(e=>`<button class="listbtn card" data-open="${escapeHTML(e.id)}"><strong lang="zh-Hans" style="font-size:40px">${escapeHTML(e.simplified)}</strong> ${e.traditional&&e.traditional!==e.simplified?escapeHTML(e.traditional):""}<div class="muted">${escapeHTML(e.type||"character")} · ${escapeHTML(e.pinyin||"pinyin missing")} · ${escapeHTML(french(e.pinyin))} · ${escapeHTML(e.meaning||"meaning missing")}</div>${pending.includes(e)?'<div>Needs review</div>':''}</button>`).join('')+(list.length?'':'<p>No words in this list.</p>');
   $("#libQ").oninput=()=>{const pos=$("#libQ").selectionStart;renderLibrary();$("#libQ").focus();$("#libQ").setSelectionRange(pos,pos)};
   $("#dictAll").onclick=()=>{dictionaryFilter='all';renderLibrary()};
@@ -516,7 +528,7 @@ async function openMemoryAid(e){
 }
 $("#memoryAidClose").onclick=()=>$("#memoryAidDlg").close();
 
-const PALACE_IMAGE_SKILL="---\nname: mandarin-character-image-prompt\ndescription: Reuse or create Mandarin Memory Palace learning cards with large characters, pinyin, meanings and accurate component explanations; save new approved cards in Supabase mandarin-assets and register their links for later vocabulary review.\n---\n\n# Create or reuse a Memory Palace card\n\n## Inputs and destination\nAccept the selected Mandarin character or word, pinyin and intended meaning. Verify missing readings. Default to simplified Chinese, retaining a distinct traditional form when useful.\n\nUse the existing myCello project:\n- App: https://adedou2004-netizen.github.io/myCello/mandarin/\n- Supabase project: dbqrenlvinqheyjppxby\n- Image bucket: mandarin-assets (private; do not change bucket visibility).\n- Shared card index: public.memory_palace_cards.\n- Vocabulary: public.mandarin_entries; mnemonic_image_path stores the bucket-relative image filename.\nNever embed secrets in this file or public app code.\n\n## 1. Look up before generating\nNormalize surrounding whitespace and Unicode NFC. Match subject_type (character or expression), subject_text and the intended reading/meaning. Inspect the actual schema before querying or updating; use the connected Supabase tools.\n\nCheck the shared card index and the matching vocabulary entry for an existing image link/path. Verify that the linked object exists and loads. A stroke-animation URI such as mycello-stroke:// is not an image card.\n\nIf a matching usable card exists, DO NOT generate or upload another image. Return only a clickable link labelled with the word and pinyin. Reuse its stored canonical object path. For a private object, obtain an authorized signed display URL; do not pretend that a public-bucket URL works.\n\nThis lookup applies when a word is SHOWN AGAIN FOR REVIEW to check whether the learner knows it. It does not require creating the word again. The app should offer the saved card link in its Memory Palace/help area, without revealing the answer before the learner chooses help.\n\nDo not interpret an unavailable database or permission error as proof that no card exists.\n\n## 2. Analyze a genuinely missing card\nIdentify the real components and their layout; distinguish semantic and phonetic components. Verify uncertain origin claims using authoritative references, or explicitly label the story \"Mnemonic only.\" Never invent component meanings or present a mnemonic as real etymology.\n\nFor a simple character such as 一, explain the single stroke rather than inventing component addition. For compound words, explain each character briefly and illustrate the word as one scene.\n\n## 3. Generate the actual learning card\nUse the available image-generation tool, not merely a written prompt. Match the warm cream storybook style of the existing cards, with bold outlines, uncluttered composition and a clear memorable scene.\n\nThe card MUST contain:\n- A VERY LARGE, correctly written Mandarin character or word.\n- Official pinyin with tone marks.\n- English meaning and a brief French equivalent when available.\n- A readable component explanation using large Chinese components, pinyin and their meanings.\n- A short sentence connecting the illustration to the meaning.\n\nExample: 人 rén → 亻 (person) + 木 mù (tree / wood) = 休 xiū (to rest). A person rests against a tree.\nExample: 一 yī (one / un): one horizontal stroke represents one.\n\nInclude the requested writing. Do not use wordless-image rules or negative prompts that exclude Chinese characters, pinyin or explanatory text. Avoid unrelated writing, watermarks, logos and visual clutter.\n\nInspect the generated card for glyph, tone-mark, spelling and explanation accuracy; correct material errors before saving.\n\n## 4. Save and register\nUse the established Supabase skill and supported Storage API. Upload the actual image bytes to mandarin-assets.\n\nUse this required filename format: `english_translation_pinyin.png`.\n- Start with the English translation of the selected character or expression.\n- Add one underscore, then its pinyin without tone marks or tone numbers.\n- Use lowercase; replace spaces within each part with hyphens so the underscore clearly separates English from pinyin.\n- Strip tone diacritics; represent ü as v for an ASCII-safe filename.\n- Examples: 休 xiū (rest) → `rest_xiu.png`; 一 yī (one) → `one_yi.png`; 你好 nǐ hǎo (hello) → `hello_ni-hao.png`.\n- Use the selected meaning, not an entire semicolon-separated dictionary definition.\n- Reuse an existing matching object. For a genuinely different card with a filename collision, preserve this base and append a version suffix, e.g. `rest_xiu-v2.png`; do not overwrite without authorization.\nNever create only a database row or storage.objects metadata without uploading the bytes.\n\nUse authorized credentials or the established upload flow. Do not make the bucket public, grant broad anonymous writes, or bypass access controls. If upload access is unavailable, retain the image, report the missing access and do not claim it was saved.\n\nBefore writing, repeat the duplicate lookup in case another session has added a card. Do not replace an existing approved card without an explicit replacement request.\n\nAfter a successful upload:\n1. Store the canonical bucket-relative object path in the matching mandarin_entries.mnemonic_image_path; preserve the entry's words, reviews and unrelated fields.\n2. Insert the shared memory_palace_cards record with subject_type, normalized subject_text, title, explanatory note and a usable card link in storage_path according to the existing app contract. Record the canonical mandarin-assets path in the note if that field currently holds a display URL.\n3. Because mandarin-assets is private, use authenticated loading or signed URLs. Signed URLs expire: retain the canonical path so a fresh display URL can be obtained. Do not present expiring URLs as permanent identifiers.\n4. If a unique-key conflict occurs, reread and reuse the existing matching card instead of overwriting it.\n5. Read back the stored mapping and verify a download returns a valid image.\n\nIf the image has uploaded but registration fails, report the partial result and repair the mapping before generating another image.\n\n## 5. App behavior on later review\nLoad the shared word-to-card index when the app starts and refresh it when checking for a missing card. Resolve each displayed word against that index, independently of its spaced-repetition history.\n\nIf a saved card exists, show a \"View Memory Palace card\" link and open that card when requested; do not show the creation popup. A newly registered shared card must also work when a local personal Memory Palace record exists without a picture.\n\nKeep personal image choices and memory stories local and preferred over shared defaults. Never overwrite a person's chosen photo or automatically submit it to the shared collection.\n\nOnly when neither a usable personal picture nor a shared card exists, offer a popup saying \"Copy this into ChatGPT.\" Put the selected word, pinyin and meaning BEFORE these full instructions. This copied request must include this Supabase lookup/upload/registration workflow.\n\n## Completion\nFor an existing card, return its verified clickable link only.\nFor a new card, finish the upload and registration, then return its verified clickable link with a short saved confirmation. If any step fails, state what remains incomplete.\n";
+const PALACE_IMAGE_SKILL="# Vocabulary card creation\n\nCreate a vocabulary card for the selected Hanzi, official tone-marked Hanyu Pinyin and intended English meaning. Keep the chosen reading and meaning distinct from other senses. French is optional.\n\nA complete card contains very large correctly written Hanzi, pinyin, meaning, a vivid consistent illustration, significant components with their own Hanzi/pinyin/meanings and semantic or phonetic roles, reliably sourced character history, and a clearly labeled invented mnemonic. Never present a visual story as historical etymology. If research is incomplete, report what is missing rather than producing a supposedly verified complete card. Example sentences are optional for the current application MVP.\n\nUse Draft, Approved and Rejected. Generation or saving never counts as approval. Reuse an explicitly approved image when appropriate. Never change an approval status or upload to Supabase without the user's authorization.\n\n## Filenames\n\nUse one English word, underscore, ASCII pinyin with a tone number after each toned syllable, and hyphens between syllables. Examples: `strawberry_cao3-mei2.png`, `sunrise_ri4-chu1.png`, `green_lv4.png`. ASCII `v` represents ü. An unmarked neutral syllable can remain without a number (`de`); retain explicit `5` if supplied. Separate English meanings get separate files even when Hanzi and pinyin are identical.\n\nThe vocabulary card bucket is exactly `man_vocabularyCard`; dictionary rows are in `man_entries` and card connections in `vocabulary_cards`. Legacy images may remain in `mandarin-assets`. Preserve their existing paths until an authorized rename is performed. A Memory Palace is a separate scene that can contain vocabulary pins, not another name for a vocabulary card.\n\n## Local workflow\n\nOpen Vocabulary Card Studio. Inspect the local dictionary's research, sources and structured components. Correct and verify them, add a mnemonic and import an illustration. Create Draft Card renders a complete card only when required data passes validation. Export PNG downloads the rendered card. Approve Draft and Reject Draft are explicit user actions and affect only the selected local draft. The studio does not claim an image-generation engine is connected and makes no paid AI API calls. Export Image Prompt supplies a reusable prompt for artwork creation elsewhere.\n";
 const remotePalaceCards={};
 let remotePalaceReady=Promise.resolve();
 function palaceCardSource(e){
@@ -526,7 +538,7 @@ function palaceCardSource(e){
 function palaceImagePrompt(e){
   return "Word: "+e.simplified+"\nPinyin: "+(e.pinyin||"Please verify")+"\nMeaning: "+(e.meaning||"Please verify")+"\n\n"+
     "Create one Memory Palace learning card for this word. IMPORTANT: include a VERY LARGE Mandarin character, official pinyin with tone marks, meaning, and a clear component explanation with large Mandarin component characters and their pinyin/meanings (for example: 人 rén → 亻, person + 木 mù, tree/wood = 休 xiū, to rest). Distinguish real origins from invented mnemonics. This explicit request OVERRIDES every wordless/no-writing instruction in the SkillMD below. Generate the image, not only a prompt.\n\n"+
-    PALACE_IMAGE_SKILL+"\n\nComplete the Supabase lookup first. Reuse an existing card link; otherwise create, upload to mandarin-assets, register the link and verify it.";
+    PALACE_IMAGE_SKILL+"\n\nReuse an approved image when possible. Keep newly generated cards as Draft. Do not upload or approve without my authorization.";
 }
 function openPalacePrompt(e){
   $("#palacePromptWord").textContent=e.simplified;
@@ -607,7 +619,7 @@ function select(which){
   if(which==="quiz") renderQuiz();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>select(b.dataset.tab));
-select("today"); remotePalaceReady=loadRemotePalace();
+select(dueIds().length?"today":"lessons"); remotePalaceReady=loadRemotePalace();
 if(storageLoadError){const warning=document.createElement('p');warning.setAttribute('role','alert');warning.textContent='Your saved dictionary could not be read. Existing data has not been overwritten. Open Capture → Backup and recovery to restore a backup.';document.querySelector('header').append(warning);}
 </script>
 <script src="./capture.js?v=20261117-review1"></script>

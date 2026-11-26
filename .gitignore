@@ -1,2 +1,4 @@
 node_modules/
 mandarin/tests/results/
+
+mandarin/admin/.data/

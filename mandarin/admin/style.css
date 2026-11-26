@@ -1,0 +1,290 @@
+:root {
+  font-family: Arial, sans-serif;
+  color: #14146a;
+  background: #f6f9ff;
+  font-size: 16px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: white;
+  border-bottom: 2px solid #39aa26;
+  padding: 24px 32px;
+}
+header #help {
+  margin-left: auto;
+}
+.brand {
+  font-size: 34px;
+  font-weight: 900;
+  font-style: italic;
+  color: #161277;
+  text-decoration: none;
+}
+.brand span {
+  color: #289f00;
+}
+.pill,
+.badge {
+  background: #e5f7d6;
+  border-radius: 24px;
+  padding: 9px 18px;
+  font-size: 14px;
+}
+.shell {
+  display: grid;
+  grid-template-columns: 225px 1fr;
+  min-height: 85vh;
+}
+aside {
+  background: linear-gradient(white, #e5edfc);
+  padding: 30px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+aside a {
+  padding: 12px;
+  color: inherit;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  border: 1px solid #c6d1ec;
+  border-radius: 14px;
+  padding: 11px 16px;
+  background: white;
+  color: #14146a;
+}
+button:hover {
+  background: #edf8e7;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.active,
+.primary {
+  background: linear-gradient(#39bc00, #149200);
+  color: white;
+  border-color: #31ad06;
+}
+aside button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+}
+aside button.active {
+  background: #d9ffc1;
+  color: #187716;
+  border-radius: 28px;
+}
+main {
+  padding: 28px;
+  min-width: 0;
+}
+h1 {
+  font-size: 36px;
+  margin: 0;
+}
+h2 {
+  font-size: 23px;
+}
+h3 {
+  font-size: 18px;
+}
+.intro {
+  color: #278c15;
+  font-size: 21px;
+}
+.counts,
+.toolbar,
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.counts {
+  margin: 22px 0;
+}
+.counts button {
+  box-shadow: 0 2px 4px #cbd5e7;
+}
+.toolbar {
+  margin: 22px 0;
+}
+.toolbar input {
+  flex: 1;
+  min-width: 190px;
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(340px, 1.2fr) minmax(300px, 1fr);
+  gap: 20px;
+}
+.panel {
+  background: white;
+  border: 1px solid #d3def1;
+  border-radius: 22px;
+  box-shadow: 0 3px 5px #dce3f0;
+  padding: 20px;
+  min-width: 0;
+  overflow: auto;
+}
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #c9d3e7;
+  border-radius: 12px;
+  color: #14146a;
+  background: #fff;
+}
+input[type="checkbox"] {
+  width: auto;
+}
+input[type="file"] {
+  max-width: 100%;
+}
+label {
+  display: block;
+  margin: 14px 0 6px;
+}
+textarea {
+  min-height: 85px;
+}
+.toolbar select {
+  width: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+th {
+  background: #eff1fa;
+}
+th,
+td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #e8edf7;
+}
+tr.selected {
+  background: #edffe3;
+}
+td button.word {
+  font-size: 32px;
+  border: 0;
+  padding: 2px;
+  background: transparent;
+}
+.hanzi {
+  font-size: 80px;
+  line-height: 1.4;
+}
+.component {
+  font-size: 42px;
+}
+.muted {
+  color: #68748e;
+}
+.warning {
+  color: #9a4c00;
+}
+#message {
+  min-height: 22px;
+}
+#message.error {
+  color: #ad2433;
+}
+.preview {
+  width: 100%;
+  max-height: 850px;
+  object-fit: contain;
+}
+.actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.component-row {
+  border-top: 1px solid #dce3f0;
+  padding: 12px 0;
+}
+dialog {
+  border: 1px solid #ccd6ed;
+  border-radius: 20px;
+  max-width: 600px;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+a {
+  color: #161b8f;
+}
+.card-image {
+  max-width: 100%;
+  max-height: 400px;
+}
+small {
+  font-size: 13px;
+}
+@media (max-width: 1000px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .shell {
+    grid-template-columns: 180px 1fr;
+  }
+  header {
+    gap: 15px;
+    padding: 16px;
+  }
+  .brand {
+    font-size: 25px;
+  }
+}
+@media (max-width: 650px) {
+  header {
+    flex-wrap: wrap;
+  }
+  .shell {
+    display: block;
+  }
+  aside {
+    flex-direction: row;
+    overflow: auto;
+    padding: 8px;
+  }
+  aside button {
+    white-space: nowrap;
+  }
+  aside a {
+    display: none;
+  }
+  main {
+    padding: 16px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+  .panel {
+    padding: 12px;
+  }
+}

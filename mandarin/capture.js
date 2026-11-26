@@ -364,7 +364,7 @@ function captureCommit(next){
   const current=localStorage.getItem(KEY);
   if(current!==storageBaseline)throw Error('The dictionary changed in another tab. Export your draft, then reload before saving.');
   // A single localStorage replacement is atomic: vocabulary, source and lesson links commit together.
-  const json=JSON.stringify(next);localStorage.setItem(KEY,json);storageBaseline=json;db=next;
+  const json=JSON.stringify(next);localStorage.setItem(KEY,json);storageBaseline=json;db=next;persistLearning();
 }
 async function captureSave(){
   if(captureSaving||!captureSession.verified||!captureSelection)return;captureSaving=true;captureUpdateSave();
@@ -382,11 +382,11 @@ function captureExport(){
 }
 async function captureImport(file){
   if(!file)return;
-  try{const backup=JSON.parse(await file.text());if(backup.format!=='myCello-backup'||backup.version!==1)throw Error('Unsupported backup format.');const next=C.validateDB(backup.database);
+  try{const backup=JSON.parse(await file.text());if(backup.format==='myCello-vocabulary-bundle'){captureImportBundle(backup);return;}if(backup.format!=='myCello-backup'||backup.version!==1)throw Error('Unsupported backup format.');const next=C.validateDB(backup.database);
     if(!confirm('Restore this backup and replace the dictionary on this device? Export your current data first if you want to keep it.'))return;
     // Retain the previous bytes before an explicitly requested restore.
     const previous=localStorage.getItem(KEY);if(previous)localStorage.setItem(KEY+'-before-restore',previous);
-    const json=JSON.stringify(next);localStorage.setItem(KEY,json);storageLoadError=null;storageBaseline=json;db=next;captureCollect();captureRender();captureMessage('Backup restored. Previous dictionary bytes were retained on this device.');
+    const json=JSON.stringify(next);localStorage.setItem(KEY,json);storageLoadError=null;storageBaseline=json;db=next;persistLearning();captureCollect();captureRender();captureMessage('Backup restored. Previous dictionary bytes were retained on this device.');
   }catch(e){captureMessage('Backup was not restored: '+e.message,true);}
 }
 function captureLeave(){
@@ -398,3 +398,18 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&captureMou
 
 
 
+
+function captureImportBundle(bundle){
+  if(bundle.version!==1||!Array.isArray(bundle.entries)||!Array.isArray(bundle.lessons))throw Error('Unsupported vocabulary bundle.');
+  const next=JSON.parse(JSON.stringify(db)),mapping=new Map();
+  for(const incoming of bundle.entries){
+    if(!incoming.id||!C.normalize(incoming.simplified)||!C.normalize(incoming.pinyin)||!C.normalize(incoming.meaning))throw Error('Incomplete bundle entry.');
+    const matches=next.entries.filter(e=>C.normalize(e.simplified)===C.normalize(incoming.simplified)&&AdminCore.pinyinKey(e.pinyin)===AdminCore.pinyinKey(incoming.pinyin)&&C.normalize(e.meaning)===C.normalize(incoming.meaning));
+    const target=matches[0];
+    if(target){mapping.set(incoming.id,target.id);continue;}
+    if(next.entries.some(e=>e.id===incoming.id))throw Error('Bundle ID conflicts with a different existing word.');
+    next.entries.push({...incoming,status:'new',srsEligible:false});mapping.set(incoming.id,incoming.id);
+  }
+  for(const lesson of bundle.lessons){if(!lesson.id||!lesson.title||!Array.isArray(lesson.items)||lesson.items.some(id=>!mapping.has(id)))throw Error('Invalid bundle lesson.');const items=lesson.items.map(id=>mapping.get(id)),existing=next.lessons.find(l=>l.id===lesson.id);if(existing){if(existing.title!==lesson.title)throw Error('Lesson ID conflict.');existing.items=[...new Set([...existing.items,...items])];}else next.lessons.push({...lesson,items});}
+  C.validateDB(next);captureCommit(next);captureRender();captureMessage('Vocabulary and lessons imported. Existing learning progress preserved; new words enter SRS after three successful lesson passes.');
+}
