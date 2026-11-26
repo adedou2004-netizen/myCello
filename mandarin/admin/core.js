@@ -122,7 +122,7 @@
           c.storage_bucket === object.bucket_id &&
           c.vocabulary_card_path === path,
       );
-      const parsed = path.match(/^([a-z]+)_([a-züv1-5-]+)\.(png|webp)$/i);
+      const parsed = path.match(/^([a-z]+)[_+]([a-züv1-5-]+)\.(png|webp)$/i);
       let matches =
         parsed && pinyinKey(parsed[2])
           ? s.entries.filter(
@@ -146,12 +146,12 @@
       const compact = s.cards.filter(
         (c) =>
           c.storage_bucket === object.bucket_id &&
-          c.vocabulary_card_path.replace(/-/g, "") === path.replace(/-/g, ""),
+          norm(c.vocabulary_card_path).replace(/-/g, "") === path.replace(/-/g, ""),
       );
       const status = known.length
-        ? matches.length
+        ? matches.length === 1
           ? "linked"
-          : "entry missing"
+          : matches.length > 1 ? "ambiguous" : "entry missing"
         : compact.length === 1
           ? "path mismatch"
           : matches.length === 1
@@ -203,6 +203,13 @@
         const c = next.cards.find((c) => c.id === r.cardId);
         c.vocabulary_card_path = r.path;
         changed++;
+      }
+      if (r.status === "entry missing") {
+        const object = next.objects.find(o => o.bucket_id === "man_vocabularyCard" && o.name === r.path);
+        const parsed = object?.name.match(/^([a-z]+)[_+]([a-züv1-5-]+)\.(png|webp)$/i);
+        const candidates = parsed && pinyinKey(parsed[2]) ? next.entries.filter(e => pinyinKey(e.pinyin) === pinyinKey(parsed[2]) && norm(e.meaning_en).toLowerCase().split(/[;,/]/).some(m=>m.trim().replace(/^to /,"")===parsed[1].toLowerCase())) : [];
+        const records = next.cards.filter(c=>c.storage_bucket === "man_vocabularyCard" && c.vocabulary_card_path === r.path);
+        if(candidates.length===1 && records.length===1 && !records[0].entry_id) { records[0].entry_id=candidates[0].id; changed++; }
       }
       if (r.status === "match available") {
         const e = next.entries.find((e) => e.id === r.entryId);
