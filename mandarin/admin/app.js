@@ -20,7 +20,15 @@ let data,
   filter = "",
   query = "",
   checked = new Set(),
-  previewURL = null;
+  previewURL = null,
+  wordPage = 0, studioStep = 0, reportPage = 0;
+function pageSize() { return Math.max(2, Math.min(12, Math.floor(((window.innerHeight || 800) - 350) / 48))); }
+function pager(id, index, count, change) {
+  const el = $(id);
+  el.innerHTML = `<button type="button" data-prev ${index === 0 ? "disabled" : ""}>← Previous</button><span>Page ${index + 1} of ${count}</span><button type="button" data-next ${index + 1 >= count ? "disabled" : ""}>Next →</button>`;
+  el.querySelector("[data-prev]").onclick = () => change(index - 1);
+  el.querySelector("[data-next]").onclick = () => change(index + 1);
+}
 function message(s, error = false) {
   $("message").textContent = s;
   $("message").className = error ? "error" : "";
@@ -74,6 +82,7 @@ function cardStatus(id) {
 }
 function setPage(p) {
   page = p;
+  if (p === "cards") studioStep = 0;
   render();
 }
 function render() {
@@ -111,11 +120,16 @@ function words() {
             ? cardStatus(e.id) === "Draft"
             : true),
   );
+  const size = pageSize(), count = Math.max(1, Math.ceil(list.length / size));
+  wordPage = Math.min(wordPage, count - 1);
+  const visible = list.slice(wordPage * size, (wordPage + 1) * size);
   $("content").innerHTML =
-    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="verified">Verified (${verified})</button><button disabled>Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${list.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table><p>${list.length} words</p></div><div class="panel" id="details"></div></div>`;
+    `<div class="counts"><button data-filter="">All Words (${data.entries.length})</button><button data-filter="verified">Verified (${verified})</button><button disabled>Cards Approved (${approved})</button><button data-filter="missing">Cards Missing (${data.entries.filter((e) => cardStatus(e.id) === "Missing").length})</button><button data-filter="draft">Drafts (${drafts})</button></div><div class="toolbar"><input id="search" aria-label="Search vocabulary" placeholder="Search Chinese, Pinyin, English or French…" value="${esc(query)}"><button id="addWord" class="primary">＋ Add Word</button></div><div class="row"><span>${checked.size} selected</span><button id="bulkReview">Mark needs review</button><button id="bulkPrompt">Export card prompts</button><button id="bulkLesson">Create lesson</button><button id="bulkImport">Bulk import JSON</button><input type="file" accept="application/json,.json" id="bulkFile" hidden></div><div class="split" style="margin-top:20px"><div class="panel"><table><thead><tr><th><input id="checkAll" type="checkbox" aria-label="Select visible words"></th><th>Chinese</th><th>Pinyin</th><th>Meaning</th><th>Card Status</th></tr></thead><tbody>${visible.map((e) => `<tr class="${e.id === selected ? "selected" : ""}"><td><input type="checkbox" data-check="${esc(e.id)}" ${checked.has(e.id) ? "checked" : ""} aria-label="Select ${esc(e.hanzi)}"></td><td><button class="word" data-word="${esc(e.id)}" lang="zh-Hans">${esc(e.hanzi)}</button></td><td>${esc(e.pinyin)}</td><td>${esc(e.meaning_en)}</td><td>${cardStatus(e.id)}</td></tr>`).join("")}</tbody></table><div class="pager" id="wordPager"></div><p>${list.length} words</p></div><div class="panel" id="details"></div></div>`;
+  pager("wordPager", wordPage, count, i => { wordPage = i; words(); });
   $("search").oninput = (e) => {
     const position = e.target.selectionStart;
     query = e.target.value;
+    wordPage = 0;
     words();
     $("search").focus();
     $("search").setSelectionRange(position, position);
@@ -124,6 +138,7 @@ function words() {
     (b) =>
       (b.onclick = () => {
         filter = b.dataset.filter;
+        wordPage = 0;
         words();
       }),
   );
@@ -144,7 +159,7 @@ function words() {
       }),
   );
   $("checkAll").onchange = (e) => {
-    list.forEach((x) =>
+    visible.forEach((x) =>
       e.target.checked ? checked.add(x.id) : checked.delete(x.id),
     );
     words();
@@ -294,8 +309,7 @@ function studio() {
         )
         .join("") || "<p>No card linked yet.</p>"
     }</section></div>`;
-  $("researchForm").onsubmit = async (event) => {
-    event.preventDefault();
+  async function saveResearch() {
     try {
       const n = structuredClone(data),
         word = n.entries.find((x) => x.id === selected);
@@ -342,16 +356,19 @@ function studio() {
         });
       }
       await commit(n);
-      studio();
+      return true;
     } catch (err) {
       message(err.message, true);
+      return false;
     }
-  };
+  }
+  $("researchForm").onsubmit = async event => { event.preventDefault(); if (await saveResearch()) studio(); };
   $("addComponent").onclick = act(async () => {
     const id = $("componentSelect").value;
     if (!id) throw Error("Choose a component.");
     if (components.some((c) => c.component_entry_id === id))
       throw Error("Component already linked.");
+    if (!(await saveResearch())) return;
     const n = structuredClone(data);
     n.components.push({
       id: crypto.randomUUID(),
@@ -364,6 +381,7 @@ function studio() {
     await commit(n);
     studio();
   });
+  setupStudioSteps(saveResearch);
   $("researchPrompt").onclick = act(() => download(A.researchPrompt(data, selected), "vocabulary_research_request.md", "text/markdown"));
   $("prompt").onclick = act(() =>
     download(
@@ -465,10 +483,42 @@ function studio() {
           : "Rejected by you · retained locally.";
     });
 }
+function setupStudioSteps(saveResearch) {
+  const form = $("researchForm"), root = $("content").firstElementChild;
+  root.classList.add("studio-layout");
+  const researchPanel = form.parentElement, generationPanel = researchPanel.nextElementSibling, previewPanel = root.lastElementChild;
+  const steps = ["History & sources", "Components", "Memory trick", "Example & illustration", "Generate & review"];
+  const groups = Array.from({length: 4}, () => { const div = document.createElement("div"); div.className = "studio-step"; return div; });
+  let group = 0;
+  for (const child of [...form.children]) {
+    if (child.tagName === "H3" && child.textContent === "Components") group = 1;
+    if (child.tagName === "H3" && child.textContent === "Memory trick") group = 2;
+    if (child.querySelector("#exampleHanzi")) group = 3;
+    groups[group].append(child);
+  }
+  groups.forEach(g => form.append(g));
+  const nav = document.createElement("nav"); nav.className = "step-nav"; nav.innerHTML = `<div class="step-title"></div><div class="pager"><button type="button" id="stepBack">← Previous</button><button type="button" id="stepNext" class="primary">Save & Next →</button></div>`;
+  $("content").prepend(nav);
+  function show() {
+    groups.forEach((g,i) => g.hidden = i !== studioStep);
+    researchPanel.hidden = studioStep === 4;
+    generationPanel.hidden = previewPanel.hidden = studioStep !== 4;
+    root.classList.toggle("review-step", studioStep === 4);
+    nav.querySelector(".step-title").textContent = `Step ${studioStep + 1} of ${steps.length} · ${steps[studioStep]}`;
+    $("stepBack").disabled = studioStep === 0;
+    $("stepNext").hidden = studioStep === 4;
+    if (studioStep === 4) { const errors = A.promptErrors(data, selected); $("promptStatus").textContent = errors.join(" "); $("prompt").disabled = !!errors.length; }
+  }
+  $("stepBack").onclick = act(async () => { if (studioStep < 4 && !(await saveResearch())) return; studioStep--; show(); });
+  $("stepNext").onclick = act(async () => { if (!(await saveResearch())) return; studioStep++; show(); });
+  show();
+}
 function transfer() {
-  const report = A.reconcile(data);
+  const report = A.reconcile(data), size = pageSize(), count = Math.max(1, Math.ceil(report.length / size));
+  reportPage = Math.min(reportPage, count - 1);
   $("content").innerHTML =
-    `<section class="panel"><h2>Backup and restore</h2><p>Includes vocabulary, research, components, card metadata, local illustrations, generated cards and administration lessons. Learning progress belongs to the learning app’s backup.</p><div class="row"><a href="/api/backup" download>Download Administration Backup</a><button id="learningExport">Export Learning Bundle</button><label>Restore administration backup<input id="restore" type="file" accept="application/json,.json"></label></div></section><section class="panel" style="margin-top:20px"><h2>Vocabulary card connections</h2><p>${report.length} inventory results. Matching never approves cards or renames images.</p><button id="match">Apply Unambiguous Matches Locally</button><button id="report">Download Connection Report</button><table><thead><tr><th>File</th><th>Word</th><th>Connection</th></tr></thead><tbody>${report.map((r) => `<tr><td>${esc(r.path)}</td><td>${esc(r.hanzi)}</td><td>${esc(r.status)}</td></tr>`).join("")}</tbody></table></section>`;
+    `<section class="panel"><h2>Backup and restore</h2><p>Includes vocabulary, research, components, card metadata, local illustrations, generated cards and administration lessons. Learning progress belongs to the learning app’s backup.</p><div class="row"><a href="/api/backup" download>Download Administration Backup</a><button id="learningExport">Export Learning Bundle</button><label>Restore administration backup<input id="restore" type="file" accept="application/json,.json"></label></div></section><section class="panel" style="margin-top:20px"><h2>Vocabulary card connections</h2><p>${report.length} inventory results. Matching never approves cards or renames images.</p><button id="match">Apply Unambiguous Matches Locally</button><button id="report">Download Connection Report</button><table><thead><tr><th>File</th><th>Word</th><th>Connection</th></tr></thead><tbody>${report.slice(reportPage * size, (reportPage + 1) * size).map((r) => `<tr><td>${esc(r.path)}</td><td>${esc(r.hanzi)}</td><td>${esc(r.status)}</td></tr>`).join("")}</tbody></table><div id="reportPager" class="pager"></div></section>`;
+  pager("reportPager", reportPage, count, i => { reportPage = i; transfer(); });
   $("restore").onchange = act(async () => {
     const n = A.validate(JSON.parse(await $("restore").files[0].text()));
     if (
