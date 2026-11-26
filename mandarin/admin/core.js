@@ -329,11 +329,70 @@
     );
     return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="${y + 25}" viewBox="0 0 960 ${y + 25}"><rect width="960" height="100%" rx="30" fill="#fff7f0"/><g fill="#15135d" font-family="sans-serif"><text x="54" y="180" font-size="${e.hanzi.length > 3 ? 90 : 140}">${xml(e.hanzi)}</text><text x="54" y="255" font-size="44">${xml(e.pinyin)}</text><text x="54" y="315" font-size="32">${xml(e.meaning_en)}</text><text x="54" y="355" font-size="26">${xml(e.meaning_fr || "")}</text><image x="540" y="35" width="380" height="470" href="${e.illustration}"/>${paragraphs.join("")}</g></svg>`;
   }
-  function prompt(s, entryId) {
+  function promptErrors(s, entryId) {
+    const e = s.entries.find((x) => x.id === entryId);
+    if (!e) return ["Choose a word."];
+    const r = s.research.find((x) => x.entry_id === entryId);
+    const complete = (v) => !!norm(v) && !/^(unverified|to be written|tbd|unknown|null|n\/a)\b/i.test(norm(v));
+    const errors = [];
+    if (![e.hanzi, e.pinyin, e.meaning_en].every(complete)) errors.push("Hanzi, pinyin and English meaning are required.");
+    const domains = new Set();
+    for (const source of r?.sources || []) {
+      let v = source;
+      if (typeof v === "string" && v.startsWith("{")) {
+        try { v = JSON.parse(v); } catch { continue; }
+      }
+      if (typeof v === "object" && v?.verified === false) continue;
+      try {
+        const u = new URL(typeof v === "string" ? v : v?.url || v?.reference);
+        if (["http:", "https:"].includes(u.protocol)) domains.add(u.hostname.replace(/^www\./, ""));
+      } catch {}
+    }
+    if (r?.verification_status !== "verified" || !complete(r.verified_origin_en) || domains.size < 2)
+      errors.push("Verified history and two independent source URLs are required.");
+    if (!complete(r?.formation_type)) errors.push("Record the character formation type.");
+    if (!complete(e.mnemonic) || !["historical", "component", "invented"].includes(e.mnemonic_type))
+      errors.push("Add a concrete memory trick and select its type.");
+    const components = s.components.filter((x) => x.entry_id === entryId);
+    if (!components.length && !r?.components_not_applicable) errors.push("Add verified components or explicitly mark decomposition not applicable.");
+    for (const c of components) {
+      const p = s.entries.find((x) => x.id === c.component_entry_id);
+      if (c.verification_status !== "verified" || !["semantic","phonetic","both","visual_mnemonic"].includes(c.role) || ![p?.hanzi,p?.pinyin,p?.meaning_en,c.explanation_en].every(complete))
+        errors.push("Each component needs verified role, Hanzi, pinyin, meaning and explanation.");
+    }
+    if (![e.example?.hanzi,e.example?.pinyin,e.example?.meaning].every(complete)) errors.push("Add a checked example sentence, pinyin and English translation.");
+    return errors;
+  }
+  function researchPrompt(s, entryId) {
     const e = s.entries.find((x) => x.id === entryId);
     if (!e) throw Error("Choose a word.");
+    return [
+      "Research request ONLY — do not generate an image.",
+      "Word: " + e.hanzi + " · " + e.pinyin + " · " + e.meaning_en,
+      "Verify simplified/traditional forms, reading, meaning, formation type, historical origin, ancient forms and actual component roles. Cross-check at least two independent sources, prioritizing Outlier, CUHK, Dong Chinese, Chinese Etymology and Wiktionary. Give actual URLs and document uncertainty.",
+      "Provide a vivid memory trick and label its type historical, component or invented; never confuse invention with history. Include a checked example sentence with pinyin and English. State explicitly when component decomposition is not applicable. Return research for manual review and entry in the local administration."
+    ].join("\n");
+  }
+  function prompt(s, entryId) {
+    const errors = promptErrors(s, entryId);
+    if (errors.length) throw Error("Research Required: " + errors.join(" "));
+    const e = s.entries.find((x) => x.id === entryId);
     const r = s.research.find((x) => x.entry_id === entryId);
-    return `Create a DRAFT vocabulary card for ${e.hanzi} (${e.pinyin}), meaning ${e.meaning_en}. Very large, correctly written Hanzi; tone-marked Hanyu Pinyin; English meaning; French if supplied.\nVerified history: ${r?.verification_status === "verified" ? r.verified_origin_en : "UNVERIFIED: verify with reliable sources before generating a complete card."}\nSources: ${JSON.stringify(r?.sources || [])}\nStructured components: ${JSON.stringify(s.components.filter((x) => x.entry_id === entryId).map((c) => ({ ...c, component: s.entries.find((e) => e.id === c.component_entry_id) })))}\nInvented mnemonic, NOT historical origin: ${e.mnemonic || "To be written."}\nVivid watercolor illustration; consistent attractive style. Do not invent component meanings or historical claims. Include a natural sentence only if supplied: ${JSON.stringify(e.example || null)}. Generated images remain Draft until the user explicitly approves. Never upload or publish automatically.`;
+    const components = s.components.filter((x) => x.entry_id === entryId).map(c => {
+      const p = s.entries.find(x => x.id === c.component_entry_id);
+      return { hanzi: p.hanzi, pinyin: p.pinyin, meaning: p.meaning_en, role: c.role, explanation: c.explanation_en };
+    });
+    return [
+      "Create a DRAFT vocabulary card for " + e.hanzi + " (" + e.pinyin + "), meaning " + e.meaning_en + (e.meaning_fr ? "; French: " + e.meaning_fr : "") + ".",
+      "Mandatory portrait orientation, 2:3 aspect ratio, target 1024 × 1536 pixels. Smartphone-readable vertical layout, very large correct Hanzi, tone-marked pinyin and meaning, generous margins and high contrast. No square or landscape cards.",
+      "Formation type: " + r.formation_type,
+      "Verified history: " + r.verified_origin_en,
+      "Sources (research reference only; do not print lengthy URLs on artwork): " + JSON.stringify(r.sources),
+      "Components: " + (components.length ? JSON.stringify(components) : "Decomposition not applicable."),
+      "Memory trick (" + e.mnemonic_type + "; clearly separate from historical facts): " + e.mnemonic,
+      "Example: " + e.example.hanzi + " · " + e.example.pinyin + " · " + e.example.meaning,
+      "Vivid consistent watercolor illustration showing the memory trick. Use large component Hanzi, pinyin and meanings where relevant. Do not invent historical claims. Keep as Draft until explicit approval; never upload or publish automatically."
+    ].join("\n");
   }
   const api = {
     norm,
@@ -348,6 +407,8 @@
     cardErrors,
     renderCard,
     prompt,
+    promptErrors,
+    researchPrompt,
   };
   if (typeof module !== "undefined") module.exports = api;
   else root.AdminCore = api;
