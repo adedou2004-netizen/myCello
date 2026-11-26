@@ -288,3 +288,44 @@ small {
     padding: 12px;
   }
 }
+
+/* Desktop administration: keep the window and navigation within the viewport. */
+[hidden] { display: none !important; }
+body { height: 100dvh; display: flex; flex-direction: column; }
+header { flex: none; padding: 12px 24px; }
+.shell { flex: 1; min-height: 0; grid-template-columns: 205px minmax(0,1fr); }
+aside { padding: 16px 12px; }
+main { display: flex; flex-direction: column; min-height: 0; padding: 14px 20px; overflow: hidden; }
+h1 { font-size: 28px; }
+h2 { margin: 8px 0; font-size: 20px; }
+.intro, #message { margin: 5px 0; font-size: 15px; }
+#content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+#content > .split { flex: 1; min-height: 0; margin-top: 4px !important; }
+.panel { padding: 12px 16px; min-height: 0; }
+.counts, .toolbar { margin: 4px 0; }
+button { padding: 7px 12px; }
+input, select, textarea { padding: 6px 9px; }
+label { margin: 7px 0 4px; }
+textarea { min-height: 55px; resize: vertical; }
+td, th { padding: 5px 8px; }
+td button.word { font-size: 26px; }
+.hanzi { font-size: 46px; line-height: 1.1; }
+.pager, .step-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none; }
+.pager { padding: 5px 0; }
+.step-title { font-weight: bold; }
+.step-nav { padding: 5px 0; }
+.studio-layout { grid-template-columns: minmax(0,1fr); }
+.studio-layout > div { min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.studio-layout > div > .panel { margin-top: 0 !important; }
+.studio-layout.review-step { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+.studio-step { max-width: 900px; }
+.studio-layout .preview { max-height: 42dvh; }
+#details form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 12px; }
+#details form label:has(textarea), #details form button { grid-column: 1 / -1; }
+@media (max-width: 850px), (max-height: 650px) {
+  body { height: auto; min-height: 100dvh; }
+  main { overflow: visible; }
+  .shell { grid-template-columns: 155px minmax(0,1fr); }
+  .split, .studio-layout.review-step { grid-template-columns: 1fr; }
+}
+@media (max-width: 650px) { .shell { display: block; } .step-nav { flex-wrap: wrap; } }
