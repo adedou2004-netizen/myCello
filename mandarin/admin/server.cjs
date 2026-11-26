@@ -5,6 +5,27 @@ const http = require("node:http"),
   crypto = require("node:crypto");
 const Core = require("./core.js");
 const ROOT = path.resolve(__dirname, "..");
+const BUCKET = "man_vocabularyCard";
+const STORAGE = "https://dbqrenlvinqheyjppxby.supabase.co/storage/v1";
+function storageHeaders() {
+ const key = process.env.MYCELLO_SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+ if (!key) throw Error("Supabase connection not configured. Set MYCELLO_SUPABASE_KEY on the local server.");
+ return {apikey:key, ...(key.startsWith("eyJ") ? {Authorization:"Bearer " + key} : {})};
+}
+async function storageRequest(route, options = {}) {
+ const response = await fetch(STORAGE + route, {...options, headers:{...storageHeaders(), ...options.headers}, redirect:"error", signal:AbortSignal.timeout(20000)});
+ if (!response.ok) throw Error("Supabase Storage request failed (HTTP " + response.status + "). Check local credentials and permissions.");
+ return response;
+}
+async function listCardObjects() {
+ const objects = [];
+ for(let offset=0;;offset+=100) {
+ const batch = await (await storageRequest("/object/list/" + BUCKET,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prefix:"",limit:100,offset,sortBy:{column:"name",order:"asc"}})})).json();
+ if (!Array.isArray(batch)) throw Error("Invalid storage inventory.");
+ objects.push(...batch.filter(x => x.id && /\\.(png|webp|jpe?g)$/i.test(x.name)).map(x=>({bucket_id:BUCKET,name:x.name})));
+ if(batch.length<100) return objects;
+ }
+}
 function createAdminServer(dataDir = path.join(__dirname, ".data")) {
   const file = path.join(dataDir, "dictionary.json");
   let queue = Promise.resolve();
@@ -46,6 +67,20 @@ function createAdminServer(dataDir = path.join(__dirname, ".data")) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     try {
       const url = new URL(req.url, `http://${host}`);
+      if (url.pathname === "/api/sync-cards" && req.method === "POST") {
+        const objects = await listCardObjects();
+        const operation = queue.then(async () => {
+          const raw = await fs.readFile(file,"utf8"), snapshot = Core.validate(JSON.parse(raw));
+          snapshot.objects = snapshot.objects.filter(o=>o.bucket_id !== BUCKET).concat(objects);
+          const result = Core.applyMatches(snapshot);
+          const tag = await write(result.next, etag(raw));
+          return {etag:tag, data:result.next, changed:result.changed, report:Core.reconcile(result.next), objects:objects.length};
+        });
+        queue = operation.catch(()=>{});
+        const result = await operation;
+        res.setHeader("Content-Type","application/json");
+        return res.end(JSON.stringify(result));
+      }
       if (url.pathname === "/api/card-image" && req.method === "GET") {
         const snapshot = await read();
         const card = snapshot.cards.find(c => c.id === url.searchParams.get("id"));
@@ -65,7 +100,12 @@ function createAdminServer(dataDir = path.join(__dirname, ".data")) {
           res.setHeader("Content-Type", types[ext]);
           return res.end(bytes);
         } catch (e) { if (e.code !== "ENOENT") throw e; }
-        return fail(404, "Image not copied to local cards folder.");
+        if (card.storage_bucket !== BUCKET) return fail(404, "Image not available locally.");
+        const remote = await storageRequest("/object/authenticated/" + BUCKET + "/" + parts.map(encodeURIComponent).join("/"));
+        const bytes = Buffer.from(await remote.arrayBuffer());
+        if (bytes.length > 20 * 1024 * 1024) return fail(413,"Card image too large.");
+        res.setHeader("Content-Type",types[ext]);
+        return res.end(bytes);
       }
       if (url.pathname === "/api/data" && req.method === "GET") {
         const raw = await fs.readFile(file, "utf8");
