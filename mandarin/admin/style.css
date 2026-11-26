@@ -329,3 +329,22 @@ td button.word { font-size: 26px; }
   .split, .studio-layout.review-step { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) { .shell { display: block; } .step-nav { flex-wrap: wrap; } }
+
+.word-list { display:flex; flex-direction:column; overflow:hidden; }
+.word-table { flex:1; min-height:0; overflow:auto; }
+.word-list .pager { flex-shrink:0; }
+.detail-tabs { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+#details { display:flex; flex-direction:column; }
+#linkedCards { display:flex; flex-direction:column; flex:1; min-height:0; gap:6px; }
+#linkedChoice { flex:none; }
+.linked-image { display:block; width:100%; flex:1; min-height:0; max-height:45dvh; object-fit:contain; }
+#linkedStatus { flex:none; font-size:13px; overflow-wrap:anywhere; margin:4px 0; }
+#details .hanzi { flex:none; }
+@media (min-width: 851px) {
+ body { height:100dvh; overflow:hidden; }
+ .shell { min-height:0; }
+ main { overflow:hidden; }
+ .split { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+ .studio-layout { grid-template-columns:minmax(0,1fr); }
+ .studio-layout.review-step { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
