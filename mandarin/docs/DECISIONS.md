@@ -18,3 +18,6 @@ Use the bucket name `man_vocabularyCard`. Name new card files with one English w
 ## Unresolved work
 
 A local generative image model, research automation, full mockup artwork parity, private cloud-image caching/preview, cross-device/cloud synchronization, IndexedDB-only storage, and real-device visual/export checks are not implemented. Existing private card images are connected by metadata; original bytes are not part of the administration data archive.
+
+## Documentation layout
+All Mandarin specifications and Markdown documentation live in `mandarin/docs/`; visual design references belong in `mandarin/docs/design/`. Keep one authoritative vocabulary-card prompt file; memory palace backgrounds are separate photos or selected portrait images. Update existing documents rather than create duplicates.

@@ -3,6 +3,9 @@
 ## Purpose
 Create a complete, historically grounded, visually memorable vocabulary card for each selected Mandarin word and intended English meaning. This is a reusable specification, not a prompt for one particular word.
 
+## Before generating — reuse existing cards
+Normalize Hanzi with NFC and trim whitespace. Match the selected word, reading and intended meaning against the vocabulary catalog. Check the canonical image path and verify that the image exists and loads. Reuse an existing approved matching card; do not regenerate it. A missing permission or connection is not evidence that a card is absent. Stroke-animation links are not vocabulary cards. Memory palace backgrounds are separate user photos or selected images; these rules apply only to vocabulary cards.
+
 ## Stage 1 — Research before image generation
 1. Verify simplified Hanzi, tone-marked Hanyu Pinyin and intended English meaning; include French if supplied. Record traditional forms where relevant.
 2. Research historical formation and original meaning. Prefer Outlier Dictionary, CUHK Multi-function Chinese Character Database, Dong Chinese, Chinese Etymology (Richard Sears), then Wiktionary.
@@ -35,3 +38,18 @@ Keep the administration local and do not require external AI API calls. Use veri
 
 ## Approval and naming
 Generated images remain Draft until explicitly approved by the user. Never upload or publish automatically. Use a single English meaning followed by underscore and ASCII numbered pinyin, with hyphens between syllables, e.g. cloud_yun2.png or strawberry_cao3-mei2.png. Separate cards for distinct English meanings even when Hanzi and pinyin match.
+
+## Manual research prompt template
+Copy the following with the rules above into a suitable research AI:
+
+> Research the Mandarin vocabulary item: {{hanzi}}; reading: {{pinyin}}; intended meaning: {{meaning}}. Apply all research, mnemonic and validation rules in this document. Return structured Hanzi, traditional form if relevant, tone-marked pinyin, meanings, formation type, components with roles and meanings, historical explanation, source URLs and uncertainty, visual mnemonic, and a natural example with pinyin and English translation. Do not generate an image yet. If information is missing, report it explicitly.
+
+## Image generation prompt template
+Use the verified research output to populate the following template, applying the mandatory format and validation rules above. Never send unresolved placeholders to an image model.
+
+> Create a complete portrait 2:3 Mandarin vocabulary card (1024 × 1536) for {{hanzi}}, {{pinyin}}, {{meaning}}. Use consistent vivid watercolor styling and a clear phone-readable layout. Display the Hanzi very large, with correct strokes, followed by tone-marked pinyin and meanings. Illustrate {{scene}}. Include {{verified_history}}, {{components}}, {{mnemonic}} and {{example_with_pinyin_and_translation}}. Distinguish invented mnemonics from historical facts. Keep source URLs off the artwork. Avoid unrelated writing, logos and watermarks, but retain all required educational text.
+
+## Review and publication
+Both manual and automated workflows use this same document. Inspect each draft for glyph accuracy, tone marks, factual accuracy and readability. Only explicit approval authorizes publication. After approval, use the current `man_vocabularyCard` bucket and `man_entries.vocabulary_card_path` mapping, verifying the live schema and actual bucket identifier before writing. Store a canonical bucket-relative path, not an expiring signed URL. Use authorized access without weakening permissions. Check duplicates again before uploading, never overwrite an approved image without permission, and verify both the image bytes and database mapping after publication. If publication is incomplete, report the failed step. Do not create duplicate cards to repair a missing link.
+
+For manual use, copy the relevant template and these master rules; for local administration, load this file rather than maintaining a second copy. Do not require external paid AI APIs. A card is optional for learning and must not block review or reveal answers before help is requested.

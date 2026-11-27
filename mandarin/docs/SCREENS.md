@@ -1,6 +1,6 @@
 # Screens and navigation
 
-Use `adminVocabMgmt.png` and `admin_vocabCards.png` as the administration visual references. Preserve their blue/green palette, common header, Help, left navigation and vocabulary/detail or research/preview split. Decorative art and an exact reproduction of the supplied wordmark remain unimplemented. Display real counts rather than mockup values.
+Use `design/adminVocabMgmt.png` and `design/admin_vocabCards.png` as the administration visual references. Preserve their blue/green palette, common header, Help, left navigation and vocabulary/detail or research/preview split. Decorative art and an exact reproduction of the supplied wordmark remain unimplemented. Display real counts rather than mockup values.
 
 | Screen | Implemented behavior |
 | --- | --- |
@@ -10,6 +10,9 @@ Use `adminVocabMgmt.png` and `admin_vocabCards.png` as the administration visual
 | Settings | Explains current storage and how to launch local administration |
 | Help | Instructions for local editing, transfer, generation and approval |
 
-The learning app retains its navigation and features; Library is labeled My Words. Due words open Today, otherwise Lessons. Search accepts numbered as well as marked pinyin. Capture → Backup and recovery accepts administration learning bundles without replacing progress. Existing Capture behavior is described in `../CAPTURE.md`.
+The learning app retains its navigation and features; Library is labeled My Words. Due words open Today, otherwise Lessons. Search accepts numbered as well as marked pinyin. Capture → Backup and recovery accepts administration learning bundles without replacing progress. Existing Capture behavior is described in `CAPTURE.md`.
 
 The new interface has responsive CSS. Desktop/mobile visual parity and phone camera behavior require a real-browser pass; automated DOM tests are not a visual approval.
+
+## Mobile design references (pending detailed specification)
+Place the supplied mockups in `design/`: Review.png, myWords.png, lessons.png, quiz.png, capture.png, memoryPalace.png, settings.png, appOpensifthere'sWordsToReview.png. The storage diagram is `design/myCello_Storage_Schema_4K.png`. These are intended references, not a claim that the images are committed or the screens implemented.
