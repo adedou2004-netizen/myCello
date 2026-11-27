@@ -1,4 +1,37 @@
-# Capture implementation and qualification
+# Capture
+
+Specification status: Draft — not yet approved or complete.
+
+![Capture design](./capture.png)
+
+Design image: expected alongside this file; original PNG upload pending. The following is a starter specification based on prior documented decisions, not a completed visual audit. Confirm all details against the supplied design.
+
+## Purpose
+Capture vocabulary from entered text or a photo.
+
+## Entry conditions
+Entry points to confirm.
+
+## Interface elements
+Enter Text and Choose Photo; preserve useful existing capture behavior subject to design review.
+
+## Behavior
+Confirm corrected text and intended vocabulary before saving.
+
+## Data
+Private capture drafts, vocabulary and lesson links; reconcile with target architecture. See [DATABASE](../DATABASE.md) and [ARCHITECTURE](../ARCHITECTURE.md).
+
+## Navigation
+Return to originating screen; exact transitions to confirm.
+
+## Acceptance criteria
+- [ ] Confirm visual reference and all controls.
+- [ ] Confirm behavior, data writes, navigation and error states.
+- [ ] Obtain explicit specification approval.
+- [ ] Verify implementation and real-device behavior where applicable.
+
+## Existing implementation notes (preserved, not final target requirements)
+
 
 ## Implemented flow
 
@@ -10,7 +43,7 @@
 
 ## Persistence and privacy
 
-Vocabulary retains the existing `mandarinAppV2` localStorage contract and queues full IndexedDB checkpoints in `myCello-learning` after successful saves. Startup can recover the checkpoint if compatible JSON is absent; see `docs/ARCHITECTURE.md` for precedence and failure behavior. Capture constructs a detached next snapshot and replaces the whole JSON record atomically; failed writes do not change the in-memory dictionary. This avoids a risky vocabulary migration. A baseline comparison refuses saves after another tab changes the dictionary (not a full distributed synchronization system).
+Vocabulary retains the existing `mandarinAppV2` localStorage contract and queues full IndexedDB checkpoints in `myCello-learning` after successful saves. Startup can recover the checkpoint if compatible JSON is absent; see `../ARCHITECTURE.md` for precedence and failure behavior. Capture constructs a detached next snapshot and replaces the whole JSON record atomically; failed writes do not change the in-memory dictionary. This avoids a risky vocabulary migration. A baseline comparison refuses saves after another tab changes the dictionary (not a full distributed synchronization system).
 
 A separate IndexedDB transaction stores the private capture draft, including the normalized photo, crop, corrected text, verification, selection and form fields. Draft writes are serialized and generation-guarded. Restore is explicit. Backgrounding stops camera/OCR and schedules draft persistence; abrupt OS termination before a pending transaction completes can still lose the last unsaved keystrokes.
 

@@ -6,7 +6,7 @@ Local administration server and mockup-based vocabulary/detail and card-studio l
 
 The local dictionary has 325 words. Initial cloud snapshot has 49 card records and 60 images in `man_vocabularyCard`. Local reconciliation adds 31 pending/private card records and corrects two paths, yielding 80 local card records across the existing buckets. No cloud records, image bytes or approval statuses were changed.
 
-Removed obsolete `mandarin/APP.md`. Updated `CAPTURE.md`, `createPalaceImage.md`, the embedded prompt and root README. Created the nine requested `mandarin/docs/` files. The original data snapshot is retained before local edits.
+Removed obsolete `mandarin/APP.md`. Updated `design/capture.md`, `createPalaceImage.md`, the embedded prompt and root README. Created the nine requested `mandarin/docs/` files. The original data snapshot is retained before local edits.
 
 ## Remaining
 

@@ -21,3 +21,5 @@ A local generative image model, research automation, full mockup artwork parity,
 
 ## Documentation layout
 All Mandarin specifications and Markdown documentation live in `mandarin/docs/`; visual design references belong in `mandarin/docs/design/`. Keep one authoritative vocabulary-card prompt file; memory palace backgrounds are separate photos or selected portrait images. Update existing documents rather than create duplicates.
+
+Each design PNG has a same-base-name Markdown specification alongside it, using camelCase filenames. SCREENS.md is the approval tracker. General documents use uppercase names. Draft specifications are not approved merely by creation.
